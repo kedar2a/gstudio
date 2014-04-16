@@ -1,7 +1,7 @@
 <div id="shelf">
 
 <h4 class="text-center">Shelf</h4>
-<dl class="accordion" data-accordion>
+<dl class="accordion" id="shelf-items" data-accordion>
 <!-- Adding new shelf text input and add button -->
   <dd>  
     <div class="row">
@@ -10,7 +10,10 @@
           <input type="text" id="new-shelf-text" onkeyup="(this.value).trim().length?$('#add-shelf-btn').removeClass('disabled'):$('#add-shelf-btn').addClass('disabled');" placeholder="Add new shelf">
         </div>
         <div class="small-2 columns">
-          <div id="add-shelf-btn" class="button postfix disabled">Add</div>
+          <div id="add-shelf-btn" class="button postfix disabled" 
+          onclick="$('#add-shelf-btn').hasClass('disabled')?'':addNewShelf($('#new-shelf-text').val().trim());">
+            Add
+          </div>
         </div>
       </div>
     </div>
@@ -78,39 +81,65 @@
 </dl>
 </div>
 
+
 <script>
 
-  $("#add-shelf-btn").click(function() {
+  // To add new shelf, if that dosen't exist 
+  function addNewShelf(shelfName)
+  {
+    var shelfNameList = [];
+  
+    $('dl#shelf-items dd > a.shelfName').each(function(b){ shelfNameList.push( $(this).text().trim().toLowerCase() )});
 
-    $.ajax({
-      type: "POST",
-      url: "{% url 'shelf' groupid %}",
-      datatype: "html",
-      data:{
-        shelf_name: $('#new-shelf-text').val(),
-        shelf_add: "{{ node.pk }}",
-        csrfmiddlewaretoken: '{{ csrf_token }}'
-      },
-      success: function(data) {
-        $("#shelf").html(data);
-      }
-    });
+    if ( shelfNameList.indexOf(shelfName.trim().toLowerCase()) >= 0)
+    {
+      alert("Shelf with this name already exist !\n\n Create shelf with different name.");
+    }
+    else
+    {
+      $.ajax({
+        type: "POST",
+        url: "{% url 'shelf' groupid %}",
+        data:{
+          shelf_name: shelfName,
+          shelf_method: "add_new_shelf",
+          csrfmiddlewaretoken: '{{ csrf_token }}'
+        },
+  
+        success: function(data) {
 
-  });
+          var shelfNameId = data;
 
+          $( "#shelf-items dd:nth-child(1)" )
+          .after( "<dd><a href='#shelf"+shelfNameId+"' class='shelfName'>"+shelfName+"</a> <div id='shelf"+shelfNameId+"' class='content'>"+
+            "<div class='row'><div class='row collapse'><div class='small-2 columns'>"+
+            "<a name='Personal' class='add-shelf-item'><i class='button postfix fi-arrow-right'></i></a></div>"+
+            "<div class='small-10 columns'> Add {{node.name}} </div></div></div></div></dd>" );
+        }
+      });
+    }
+
+  }
+
+  // For adding resource in the existing shelf :
   $(".add-shelf-item").click(function() {
 
     $.ajax({
       type: "POST",
       url: "{% url 'shelf' groupid %}",
-      datatype: "html",
       data:{
-        shelf_name: this.name,
-        shelf_add: "{{ node.pk }}",
+        shelf_name: (this.name).trim(),
+        shelf_method: "add_resource_to_shelf",
+        shelf_add_resource: "{{ node.pk }}",
         csrfmiddlewaretoken: '{{ csrf_token }}'
       },
       success: function(data) {
-        $("#shelf").html(data);
+        console.log(data);
+        var htmlContent = '<div class="row"><div class="row collapse"><div class="small-8 columns">'+data
+                          +'</div><div class="small-4 columns">
+                            <a rel="Maths" name="TIFR" class="remove-shelf-item"><i class="button postfix">Remove</i></a>
+                            </div></div></div>'
+
       }
     });
 

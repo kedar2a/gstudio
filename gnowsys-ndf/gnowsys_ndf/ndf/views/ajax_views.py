@@ -172,28 +172,32 @@ def collection_view(request, group_id):
 
 @login_required
 def shelf(request, group_id):
-    
-    if request.is_ajax() and request.method == "POST":    
-      shelf = request.POST.get("shelf_name", '')
-      shelf_add = request.POST.get("shelf_add", '')
-      shelf_item_remove = request.POST.get("shelf_item_remove", '')
 
-      shelf_available = ""
-      shelf_item_available = ""
-      collection= db[Node.collection_name]
-      collection_tr = db[Triple.collection_name]
+  if request.is_ajax() and request.method == "POST":    
+  
+    shelf_name = request.POST.get("shelf_name", '')
+    shelf_method = request.POST.get("shelf_method", '')
 
-      shelf_gst = collection.Node.one({'_type': u'GSystemType', 'name': u'Shelf'})
+    shelf_available = ""
+    shelf_item_available = ""
+    collection= db[Node.collection_name]
+    collection_tr = db[Triple.collection_name]
 
-      auth = collection.Node.one({'_type': u'Group', 'name': unicode(request.user.username) })
-      has_shelf_RT = collection.Node.one({'_type': u'RelationType', 'name': u'has_shelf'}) 
-      dbref_has_shelf = has_shelf_RT.get_dbref()
+    shelf_gst = collection.Node.one({'_type': u'GSystemType', 'name': u'Shelf'})
 
-      if shelf:
-        shelf_gs = collection.Node.one({'name': unicode(shelf), 'member_of': [ObjectId(shelf_gst._id)] })
+    auth = collection.Node.one({'_type': u'Group', 'name': unicode(request.user.username) })
+    has_shelf_RT = collection.Node.one({'_type': u'RelationType', 'name': u'has_shelf'}) 
+    dbref_has_shelf = has_shelf_RT.get_dbref()
+
+    if shelf_name:
+      shelf_gs = collection.Node.one({'name': unicode(shelf_name), 'member_of': [ObjectId(shelf_gst._id)] })
+
+      # For adding new shelf :
+      if shelf_method == "add_new_shelf":
+
         if shelf_gs is None:
           shelf_gs = collection.GSystem()
-          shelf_gs.name = unicode(shelf)
+          shelf_gs.name = unicode(shelf_name)
           shelf_gs.created_by = int(request.user.id)
           shelf_gs.member_of.append(shelf_gst._id)
           shelf_gs.save()
@@ -203,55 +207,107 @@ def shelf(request, group_id):
           shelf_R.relation_type = has_shelf_RT
           shelf_R.right_subject = ObjectId(shelf_gs._id)
           shelf_R.save()
+
+          new_shelf_id = shelf_gs._id.__str__()
+
+          return HttpResponse(new_shelf_id)
+      # -------------------------------------------
+
+      # For adding resource in the existing shelf :
+      if shelf_method == "add_resource_to_shelf":
+
+        shelf_add_resource = request.POST.get("shelf_add_resource",'')
+        shelf_item = ObjectId(shelf_add_resource)  
+
+        if shelf_item in shelf_gs.collection_set:
+          shelf_Item = collection.Node.one({'_id': ObjectId(shelf_item)}).name    
+          shelf_item_available = shelf_Item
         else:
-          if shelf_add:
-            shelf_item = ObjectId(shelf_add)  
+          collection.update({'_id': shelf_gs._id}, {'$push': {'collection_set': ObjectId(shelf_item) }}, upsert=False, multi=False)
+          shelf_gs.reload()
+        
+        return HttpResponse(collection.Node.one({'_id': ObjectId(shelf_item)}).name)
 
-            if shelf_item in shelf_gs.collection_set:
-              shelf_Item = collection.Node.one({'_id': ObjectId(shelf_item)}).name       
-              shelf_item_available = shelf_Item
-            else:
-              collection.update({'_id': shelf_gs._id}, {'$push': {'collection_set': ObjectId(shelf_item) }}, upsert=False, multi=False)
-              shelf_gs.reload()
+    
+    # if request.is_ajax() and request.method == "POST":    
+    #   shelf = request.POST.get("shelf_name", '')
+    #   shelf_add = request.POST.get("shelf_add", '')
+    #   shelf_item_remove = request.POST.get("shelf_item_remove", '')
 
-          elif shelf_item_remove:
-            shelf_item = collection.Node.one({'name': unicode(shelf_item_remove)})._id
-            collection.update({'_id': shelf_gs._id}, {'$pull': {'collection_set': ObjectId(shelf_item) }}, upsert=False, multi=False)      
-            shelf_gs.reload()
+    #   shelf_available = ""
+    #   shelf_item_available = ""
+    #   collection= db[Node.collection_name]
+    #   collection_tr = db[Triple.collection_name]
+
+    #   shelf_gst = collection.Node.one({'_type': u'GSystemType', 'name': u'Shelf'})
+
+    #   auth = collection.Node.one({'_type': u'Group', 'name': unicode(request.user.username) })
+    #   has_shelf_RT = collection.Node.one({'_type': u'RelationType', 'name': u'has_shelf'}) 
+    #   dbref_has_shelf = has_shelf_RT.get_dbref()
+
+    #   if shelf:
+    #     shelf_gs = collection.Node.one({'name': unicode(shelf), 'member_of': [ObjectId(shelf_gst._id)] })
+    #     if shelf_gs is None:
+    #       shelf_gs = collection.GSystem()
+    #       shelf_gs.name = unicode(shelf)
+    #       shelf_gs.created_by = int(request.user.id)
+    #       shelf_gs.member_of.append(shelf_gst._id)
+    #       shelf_gs.save()
+
+    #       shelf_R = collection_tr.GRelation()        
+    #       shelf_R.subject = ObjectId(auth._id)
+    #       shelf_R.relation_type = has_shelf_RT
+    #       shelf_R.right_subject = ObjectId(shelf_gs._id)
+    #       shelf_R.save()
+    #     else:
+    #       if shelf_add:
+    #         shelf_item = ObjectId(shelf_add)  
+
+    #         if shelf_item in shelf_gs.collection_set:
+    #           shelf_Item = collection.Node.one({'_id': ObjectId(shelf_item)}).name       
+    #           shelf_item_available = shelf_Item
+    #         else:
+    #           collection.update({'_id': shelf_gs._id}, {'$push': {'collection_set': ObjectId(shelf_item) }}, upsert=False, multi=False)
+    #           shelf_gs.reload()
+
+    #       elif shelf_item_remove:
+    #         shelf_item = collection.Node.one({'name': unicode(shelf_item_remove)})._id
+    #         collection.update({'_id': shelf_gs._id}, {'$pull': {'collection_set': ObjectId(shelf_item) }}, upsert=False, multi=False)      
+    #         shelf_gs.reload()
           
-          else:
-            shelf_available = shelf
+    #       else:
+    #         shelf_available = shelf
 
-      else:
-        shelf_gs = None
+    #   else:
+    #     shelf_gs = None
 
-      shelf = collection_tr.Triple.find({'_type': 'GRelation','subject': ObjectId(auth._id), 'relation_type': dbref_has_shelf })        
-      shelves = []
-      shelf_list = {}
+    #   shelf = collection_tr.Triple.find({'_type': 'GRelation','subject': ObjectId(auth._id), 'relation_type': dbref_has_shelf })        
+    #   shelves = []
+    #   shelf_list = {}
 
-      if shelf:
-        for each in shelf:
-          shelf_name = collection.Node.one({'_id': ObjectId(each.right_subject)})  
-          shelves.append(shelf_name)
+    #   if shelf:
+    #     for each in shelf:
+    #       shelf_name = collection.Node.one({'_id': ObjectId(each.right_subject)})  
+    #       shelves.append(shelf_name)
 
-          shelf_list[shelf_name.name] = []         
-          for ID in shelf_name.collection_set:
-            shelf_item = collection.Node.one({'_id': ObjectId(ID) })
-            shelf_list[shelf_name.name].append(shelf_item.name)
+    #       shelf_list[shelf_name.name] = []         
+    #       for ID in shelf_name.collection_set:
+    #         shelf_item = collection.Node.one({'_id': ObjectId(ID) })
+    #         shelf_list[shelf_name.name].append(shelf_item.name)
             
-      else:
-        shelves = []
+    #   else:
+    #     shelves = []
 
-      return render_to_response('ndf/shelf.html', 
-                                  { 'shelf_obj': shelf_gs,
-                                    'shelf_list': shelf_list, 
-                                    'shelves': shelves,
-                                    'shelf_available': shelf_available,
-                                    'shelf_item_available': shelf_item_available,
-                                    'groupid':group_id
-                                  },
-                                  context_instance = RequestContext(request)
-      )
+      # return render_to_response('ndf/shelf.html', 
+      #                             { 'shelf_obj': shelf_gs,
+      #                               'shelf_list': shelf_list, 
+      #                               'shelves': shelves,
+      #                               'shelf_available': shelf_available,
+      #                               'shelf_item_available': shelf_item_available,
+      #                               'groupid':group_id
+      #                             },
+      #                             context_instance = RequestContext(request)
+      # )
 
 
 @login_required
