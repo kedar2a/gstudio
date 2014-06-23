@@ -284,7 +284,7 @@
 	 	map.setView([25.92,79.84], 5);
 
 
-
+	 	// Adding new control on map - To show best fit zoom with all the markers
 	 	var bestFitZoomControl = L.Control.extend({
 	 		options: {
 	 			position: 'topleft'
@@ -309,6 +309,7 @@
 		});
 
 	 	map.addControl(new bestFitZoomControl());
+
 
 		// getting logged in user last visited location	 	
 		{% if user.is_authenticated %}
@@ -341,11 +342,6 @@
 				        map.setView([lat, lng], zoom);
 			      	}
 	    		}
-	    		// else if( tempArr.length )
-			    // {
-			    //   var group = new L.featureGroup(tempArr)
-			    //       map.fitBounds(group.getBounds());
-			    // }
 			    else
 			    {
 			    	map.setView([25.92,79.84], 5);
@@ -370,9 +366,6 @@
 		// defining markers
 	 	nonInfoMarker = L.AwesomeMarkers.icon({ markerColor: 'blue', iconColor: 'white', spin:false });
 	 	infoMarker = L.AwesomeMarkers.icon({ icon: 'info', prefix: 'fi', markerColor: 'blue', iconColor: 'white', spin:false });
-
-	 	// var initialPopContent = "Add description.. <i>(optional)</i>",
-	 	// 	initialPopContentText = "Add description.. (optional)";
 
 	 	// map.addControl( new L.Control.Search({layer: searchLayer}) );
 
@@ -460,9 +453,6 @@
 						tempPopupContent = datetime? tempPopupContent + '<li class="bullet-item"><b>Date Time : </b>'+datetime+'</li>':tempPopupContent;
 
 						var regex = /((ftp|https?):\/\/([-\w\.]+)+(:\d+)?(\/([\w\-/_\.]*(\?\S+)?)?)?)/ig
-						// var regex = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
-						// var regex = (((ftp|https?):\/\/)(www\.)?|www\.)([\da-z-_\.]+)([a-z\.]{2,7})([\/\w\.-_\?\&]*)*\/?
-						// var regex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w\.-=?]*)*\/?/
 
 						var testLinks = description.replace(regex,"<a href='$1' target='_blank'>$1</a>");
 
@@ -507,8 +497,6 @@
 						created_by = (created_by.indexOf("anonymous_") == 0)? (created_by.split("_")[2])?created_by.split("_")[2]+ " (Anonymous User)":"Anonymous User" : created_by;
 
 						tempPopupContent = created_by? tempPopupContent + '<i style="color:gray; margin-left:"> Contributed by : ' + created_by + '</i>':tempPopupContent;
-
-			  						// console.log(edited_by);
 
 						// adding edited_by field
 						tempPopupContent = (edited_by.length > 1)? tempPopupContent + '<br/><br/><i style="color:#b2b2b2; margin-left:"> Edited by : ' + edited_by + '</i>':tempPopupContent;
@@ -578,6 +566,7 @@
 	 	}
 	 	
 
+	 	// function to get all the markers in the map and showing all of them
 	 	function bestFitZoom()
 	 	{
 	 		var group = new L.featureGroup
@@ -588,7 +577,6 @@
 
 
 	{% if mode == "edit" %}
-
 
 		// showing and uploading files
 		function imageHandler(tempMarker)
@@ -984,23 +972,6 @@
 			    ref = this.feature.properties.ref;
 
 
-
-			// Variable to store your files
-			var files;
-
-			// Add events
-			// $('input[type=file]').on('change', prepareUpload);
-			// $(popupHtmlObj).children("form input[type=file].image-upload").on('change', prepareUpload);
-
-			$(popupHtmlObj).children("form").children("input[type=file].image-upload").on('change', prepareUpload);
-
-			// Grab the files and set them to our variable
-			function prepareUpload(event)
-			{
-			  files = event.target.files;
-			}
-			// console.log(files);
-
 			$(popupHtmlObj).children("input.marker-place-name").val(placename);
 			$(popupHtmlObj).children("input.marker-dtstamp").val(datetime);
 			$(popupHtmlObj).children("textarea.marker-obs-note").val(description);
@@ -1010,7 +981,6 @@
 			{% if user.is_authenticated %}
 				$(popupHtmlObj).children("input.marker-tags").after("<div style='color:gray'> by : "+created_by+"</div><br/>");	
 			{% endif %}
-			// $(popupHtmlObj).children("div.images-list").find("ul.attached-images");
 
 			// #{#{#request.session.anonymous_added_markers}}
 
@@ -1018,15 +988,7 @@
 
 				var tempAnnM = $("input:hidden[name=anonymous_added_markers]").val();
 
-				// console.log("{{request.session.anonymous_added_markers}}");
-				// console.log(ref)
-				// console.log("{{request.session.session_key}}")
-				// console.log("{{anonymous_added_markers}}")
-				// console.log( 
-				// 	(ref == undefined) ||
-				// 	((("{{request.session.anonymous_added_markers}}").indexOf(ref) > 1) && 
-				// 	(("{{request.session.anonymous_added_markers}}").indexOf("{{request.session.session_key}}") == 0))
-				//   )
+
 				// makes input boxes enable for which user has created
 				if( 
 					(ref == undefined) ||
@@ -1073,12 +1035,7 @@
             MarkerLatLng.push(tempMarker.getLatLng().lng);
             updateHiddenTagContent(MarkerLatLng);
 
- 			
-			// if(description)
-			// {					
-			// 	$(".marker-obs-note:visible").val(description)
-			// }			
-			
+ 				
 			// To remove marker on click of delete
 			$(".popup-delete-content-button:visible").click(function(){
 
@@ -1229,33 +1186,8 @@
 
 					var updatedGeoJSON = JSON.stringify(tempMarker.toGeoJSON());
 
-					// Create a formdata object and add the files
-					// var imageData = new FormData();
-					// $.each(files, function(key, value)
-					// {
-					// 	imageData.append(key, value);
-					// });
-										
-					// var formData = new FormData($(popupHtmlObj).children("form")[0]);
-					// // Loop through each of the selected files.
-					// for (var i = 0; i < files.length; i++) {
-					//   var file = files[i];
-
-					//   // Check the file type.
-					//   // if (!file.type.match('image.*')) {
-					//   //   continue;
-					//   // }
-
-					//   // Add the file to the request.
-					//   formData.append('doc[]', file, file.name);
-					// }
-					// console.log(formData);
 
 					$(".leaflet-popup-content:visible").children("form.popup-form:visible")
-					// console.log($(popupHtmlObj).children("form"));
-					// console.log($(popupHtmlObj).children("form")[0]);
-					// var formData = new FormData($(popupHtmlObj).children("form")[0]); // Create an arbitrary FormData instance
-					// console.log(formData);
 
 			        // saving marker data in database 
 					$.ajax({
