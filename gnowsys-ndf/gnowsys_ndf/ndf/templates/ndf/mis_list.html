@@ -24,10 +24,15 @@
  -->
   <style type="text/css">
 
+    .mis-list > li > div.row {
+      line-height: 2em;
+    }
+
     .active-app-set, .active-app-set-edit, .active-app-set-view {
       /*background-color:#efefef;*/
       padding:0.5em 0 0.5em 0.5em; 
       margin-left: -10px !important;
+      opacity: 0.85;
     }
 
     .active-app-set-edit{
@@ -97,7 +102,7 @@
       {% else %}
         <!-- name of category. e.g: Place, Person-->
         <div class="category-title small-12 columns">
-          {{each.name}}
+          <i class="fi-list"></i> &nbsp;&nbsp;{{each.name}}
         </div>
       {% endif %}
     </div>
