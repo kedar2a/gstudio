@@ -377,6 +377,7 @@ INSTALLED_APPS = (
     # 'online_status',                       #for online_users     
 #    'endless_pagination',
     'registration_email',
+    'jsonrpc',
 )
 
 AUTHENTICATION_BACKENDS=(

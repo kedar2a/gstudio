@@ -15,7 +15,16 @@ from gnowsys_ndf.ndf.views.custom_app_view import custom_app_view, custom_app_ne
 
 admin.autodiscover()
 
+from jsonrpc import jsonrpc_site
+import gnowsys_ndf.ndf.views # you must import the views that need connected
+
 urlpatterns = patterns('',
+  
+  url(r'^json/browse/', 'jsonrpc.views.browse', name="jsonrpc_browser"), # for the graphical browser/web console only, omissible
+  # url(r'^json/', jsonrpc_site.dispatch, name="jsonrpc_mountpoint"),
+  url(r'^json/$', jsonrpc_site.dispatch, name='jsonrpc_mountpoint'),
+  (r'^json/(?P<method>[a-zA-Z0-9.]+)$', jsonrpc_site.dispatch), # for HTTP GET only, also omissible
+
     (r'^i18n/', include('django.conf.urls.i18n')),
     (r'^pref_lang/$', include('gnowsys_ndf.ndf.urls.languagepref')),
     (r'^admin/data/', include('gnowsys_ndf.ndf.urls.adminDashboard')),
