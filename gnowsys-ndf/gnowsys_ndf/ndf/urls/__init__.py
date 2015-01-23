@@ -5,6 +5,7 @@ from django.conf.urls import *
 from django.contrib.auth import views as auth_views
 from django.views.generic import RedirectView
 from django.views.generic import TemplateView
+# from django.views.generic.simple import redirect_to
 
 from registration.backends.default.views import RegistrationView
 from registration.backends.default.views import ActivationView
@@ -36,7 +37,11 @@ urlpatterns = patterns('',
     # --end of mobwrite
 
     (r'^admin/', include(admin.site.urls)),
-    (r'^$', HomeRedirectView.as_view()),        
+    (r'^$', HomeRedirectView.as_view()),
+    
+    (r'', include('social_auth.urls')),
+    # (r'^login/$', RedirectView, {'url': '/login/github'}),
+    # (r'^private/$', HomeRedirectView.as_view()),      
 
     (r'^(?P<group_id>[^/]+)/file', include('gnowsys_ndf.ndf.urls.file')),
     (r'^(?P<group_id>[^/]+)/image', include('gnowsys_ndf.ndf.urls.image')),

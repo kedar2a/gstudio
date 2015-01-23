@@ -375,16 +375,35 @@ INSTALLED_APPS = (
     # 'reversion',		#textb
     # 'django.contrib.flatpages',	#textb
     # 'online_status',                       #for online_users     
-#    'endless_pagination',
+    # 'endless_pagination',
 	'jsonrpc',
     'registration_email',
+    'social_auth',
 )
 
-AUTHENTICATION_BACKENDS=(
-'registration_email.auth.EmailBackend',
+AUTHENTICATION_BACKENDS = (
+    'registration_email.auth.EmailBackend',
+    'social_auth.backends.contrib.github.GithubBackend',
+    'django.contrib.auth.backends.ModelBackend',
 )
 
-ACCOUNT_ACTIVATION_DAYS = 2 # Two days for activation.
+SOCIAL_AUTH_DEFAULT_USERNAME = 'new_social_auth_user'
+SOCIAL_AUTH_ENABLED_BACKENDS = ('github',)
+
+# additional settings:
+# SOCIAL_AUTH_USERNAME_IS_FULL_EMAIL = True  # to use the full email address as the username
+# SOCIAL_AUTH_REDIRECT_IS_HTTPS = True  # to force HTTPS in the final URIs define this setting
+# GITHUB_REQUEST_TOKEN_EXTRA_ARGUMENTS = {...}
+# SOCIAL_AUTH_SANITIZE_REDIRECTS = False  # to enable redirects to different domains
+# SOCIAL_AUTH_URLOPEN_TIMEOUT = 30
+# SOCIAL_AUTH_PROTECTED_USER_FIELDS = ['email',]
+
+GITHUB_APP_ID = "3354973a8a26bfbba00f"
+# GITHUB_API_SECRET = os.environ['GITHUB_APP_SECRET']
+GITHUB_API_SECRET = "63a800cb575f0938ef00145e174fdeaa4ab47d22"
+
+
+ACCOUNT_ACTIVATION_DAYS = 2  # Two days for activation.
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -415,7 +434,29 @@ LOGGING = {
     }
 }
 
+# The URL where requests are redirected for login, especially when using the login_required() decorator.
+LOGIN_URL = '/accounts/login/'  
+
+# The URL where requests are redirected after login (dashboard in our case).
 LOGIN_REDIRECT_URL = "/"
+
+
+# --- Custom redirection for social-auth --- :
+
+# SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/another-login-url/'  # custom redirect URL different from LOGIN_URL
+# SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/new-users-redirect-url/'  # for newly registered users
+# SOCIAL_AUTH_NEW_ASSOCIATION_REDIRECT_URL = '/new-association-redirect-url/'  # for newly associated accounts
+# SOCIAL_AUTH_DISCONNECT_REDIRECT_URL = '/account-disconnected-redirect-url/' # for account disconnections:
+# SOCIAL_AUTH_BACKEND_ERROR_URL = '/new-error-url/'  # for error or user cancellation on some backends.
+
+# Configure authentication and association complete URL names to avoid possible clashes:
+SOCIAL_AUTH_COMPLETE_URL_NAME  = 'socialauth_complete'
+SOCIAL_AUTH_ASSOCIATE_URL_NAME = 'socialauth_associate_complete'
+
+# Inactive users can be redirected to a different page if this setting is defined:
+# SOCIAL_AUTH_INACTIVE_USER_URL = '...'
+
+# --- END of Custom redirection for social-auth --- :
 
 # Absolute filesystem path to the project's base directory, 
 # i.e. having settings.py file
