@@ -54,7 +54,9 @@
 {% endblock %}
 
 {% block body_content %} 
+  {% get_group_name groupid as groupname %}
   <form data-abide id="form-edit-node" method="POST" action="">
+    
     {% csrf_token %}
 
     <header class="row" style="margin: 1rem 0 0 0;">
@@ -92,12 +94,29 @@
       <div class="{% if forloop.counter == 1 %}active {% endif %}content row" id="panel_{{tab_name}}">
         {% for field in tab_fields_list %}
         <div class="row">
+          {% if groupname != "MIS_admin"  %}
+              {% if  field.altnames != 'Organised by' %} 
+                {% if field.altnames != 'Event Status' %}      
           <div class="small-2 columns"> 
             <label for="{{field.name}}" class="right inline"> {{field.altnames}} </label>
           </div>
           <div class="small-5 end columns">
             {% html_widget groupid node.pk field %}
           </div>
+            {% endif %}
+           {% endif %}
+          {% endif %}
+          
+          {% if groupname == "MIS_admin"  %}
+            {% if field.altnames != 'Event Status' %}
+          <div class="small-2 columns"> 
+            <label for="{{field.name}}" class="right inline"> {{field.altnames}} </label>
+          </div>
+          <div class="small-5 end columns">
+            {% html_widget groupid node.pk field %}
+          </div>
+            {% endif %} 
+          {% endif %}
         </div>
         {% endfor %}
 
@@ -113,7 +132,8 @@
       </div>
       
       {% endfor %}
-       <!-- Additional panels if required
+      <!-- Additional panels if required
+
       <div class="" id="panel_?">
         // Add new panel's content here
 
@@ -128,6 +148,9 @@
         </div>    
       </div>
       -->
+       <div id="hidden" hidden>
+        <input id="event_status" name="event_status" value="Scheduled">
+       <div>
     </div>
   </form>
 
@@ -136,25 +159,7 @@
 {% block script %}
   {{block.super}}
 
-  $.ajax({
-      url: "{% url 'fetch_course_name' 'Foundation Course' groupid  %}",
-      type: "GET",
-      success: function(data){
-      courses=JSON.parse(data)
-      },
-     complete:function(){
-       $.each(courses, function(key,val) {
-        $('#cname').append(
-          $("<option></option>")
-            .attr("id", "coursename_"+key.id)
-            .attr("value", key)
-            .text(val.name)
-           );
-            });
-          } 
-      });
-  }
-
+ 
   
 
 
@@ -257,7 +262,7 @@
       $(this).removeAttr('disabled');
     });
 
-    alert("coming...");
+    
 
     $('article').block({ 
       message: '<h4>Processing... Please wait!</h4>',
