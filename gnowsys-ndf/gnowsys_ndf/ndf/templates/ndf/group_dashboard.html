@@ -3,39 +3,37 @@
 {% load i18n %}
 {% block title %} {{username}}'s - Dashboard  {% endblock %}
 
-{% block meta_content %}
-  <h3>{% trans "About" %}</h3>
+{% block head %}
+  {{block.super}}
 
-  {% blocktrans %}<b>Group Dashboard</b> Shows task(s) and activitie(s) in the site.{% endblocktrans %}
+  {% if approval %}
+    <script src="/static/ndf/bower_components/DataTables/media/js/jquery.dataTables.js"></script>
+    <script src="/static/ndf/bower_components/datatables-plugins/integration/foundation/dataTables.foundation.js"></script>
+    <link href="/static/ndf/bower_components/datatables-plugins/integration/foundation/dataTables.foundation.css" rel="stylesheet" type="text/css" />
+  {% endif %}
 {% endblock %}
 
 {% block style %}
   {{block.super}}
 
-  /* Setting css-properties for reveal-modal's label */
-    div.reveal-modal > label {
-      color: white;
-      font-weight: bold;
-      font-size: 1rem;
-    }
-
-  /* Disable tab's (anchor tag's) click as it's navigation is propagated on buttons (Next & Previous) */
-    .row .row {
-      margin: 0 0;
-    }
-
-  /* css-properties for table */
-    .width_s_no {
-      width: 5%;
+    /*
+    .div-height {
+      margin-bottom: 0.5em; 
+      height: 9em;
     }
 
     .counter {
       font-weight: bold;
       text-align: right;
     }
+    */
 
     .width_Status, .width_Completed_On, .width_Enrolled, .width_Remaining, .width_Approved, .width_Rejected {
       width: 8%;
+    }
+
+    #status{
+      padding-left: 0.5rem;
     }
 
     .width_19p {
@@ -56,10 +54,61 @@
       font-weight: bold;
       text-align: right;
     }
+  
+  .img-height {
+    height: 100%;
+  }
 
-    .tiny.button {
-      font-size: 1em !important;
-    }
+  .tiny.button {
+    font-size: 1em !important;
+  }
+{% endblock %}
+
+{% block meta_content %}
+  <h3>{% trans "About" %}</h3>
+
+  {% blocktrans %}<b>Group Dashboard</b> Shows task(s) and activitie(s) in the site.{% endblocktrans %}
+  <br><br>
+
+  <form id="frmProfilePic" enctype="multipart/form-data" method="post" action="{% url 'group_dashboard' group_id %}">
+    {% csrf_token %}       
+    <div id="group_picture" style="height:183px; width:200px; background-color: #b0e1df;"> 
+            
+      {% if prof_pic_obj %}
+      {% get_grid_fs_object prof_pic_obj as grid_fs_obj %}
+      <img alt="profile picture for this group." src="{% url 'read_file' group_id prof_pic_obj.pk grid_fs_obj.filename %} " style="height:183px; width:200px; position:absolute; z-index:auto;">
+      {% else %}
+      <img src="/static/ndf/images/metaStudio-profile.svg" alt="Profile picture for this group."  style="background-color:white; border:solid 1px darkgray; width:200px; height:183px">
+      {% endif %}   
+      
+      {% if request.user.is_authenticated %}
+      
+      <input type="file" name="has_profile_pic" class="hide" />
+      <input type="hidden" name="type" value="profile_pic" />
+      <input type="hidden" name="user" value="{{usr}}" />
+      
+      <p id="message" style="display:none">
+        {% trans "Please wait for uploading profile picture" %}
+      </p>
+    </div>
+    <div class="height-div" style="height:5px">
+    <!-- this div is used for spaceing between the button Add phot button and profile picture area -->
+    </div>
+      
+    <div style="position:relative";>
+        <div style="float:left;">
+            <a style="border-style:solid; border-width:1.5px; padding:3px 5px; border-radius:4px; border-color:#477D80; color:#477D80; " id="btnUploadGroupPic" >
+            Add a Photo
+          </a> 
+          <input type="file" name="has_profile_pic" id="groupdocfile" accept="image/*" class="hide" />
+        </div>
+        <div>
+          <input type="submit" value="Save" style="font-size:15px;" />
+        </div>
+      </div>
+      {% endif %}
+
+  </form>
 {% endblock %}
 
 {% block body_content %}
@@ -68,8 +117,61 @@
   <a class="close-reveal-modal">&#215;</a>
 </div>
 
-<nav class="row" style="margin-top: 0.5rem;">
-  <dl class="tabs small-12 columns" data-tab data-options="deep_linking:true">
+<!-- Banner Div -->
+
+<!-- as per nroer specs, it doesn't want banner picture. So checking -->
+{% get_site_name_from_settings as site_name %}
+{% if site_name != "nroer" %}
+
+<form id ="frmBanner" enctype="multipart/form-data" method="post" action="{% url 'group_dashboard' group_id %}">
+  {% csrf_token %}
+  <div id="group_dashboard_Banner" style="height:300px; width:1150px; background-color: #b0e1df;">
+    
+    {% if banner_pic %}
+      {% get_grid_fs_object banner_pic as grid_fs_obj %}
+      <img alt="Profile picture for this group." src="{% url 'read_file' group_id banner_pic.pk grid_fs_obj.filename %}"
+      style="height:300px; width:1150px; position:absolute; z-index:auto;">
+      {% else %}
+        <img src="/static/ndf/images/metastudio-site-banner.png" alt="Banner picture for this group." width="100%" style="background-color:white; border:solid 1px darkgray;">
+    {% endif %}   
+
+    <div class="row">
+      <div class="row" style="margin-top:80px; margin-left:20px; background: transparent;position:absolute z-index:1"  align="Left">
+        <input type="file" name="has_Banner_pic" id="docFile" accept="image/*" class="hide"/>
+        <input type="hidden" name="type" value="banner_pic">           
+        <input type="hidden" name="user" value="{{usr}}">         
+        <p id="message" style="display:none">
+          {% trans "Please wait for uploading profile picture" %}
+        </p>
+      </div> 
+    </div>
+  </div>
+  <div class="height-div" style="height:5px">
+    <!-- this div is used for spaceing between the button Add phot button and profile picture area -->
+  </div>
+    
+  {% comment %}
+  {% if request.user.is_authenticated %}
+    <div style="position:relative;">
+      <div style="float:left;">
+        <a style="border-style:solid; border-width:1.5px; padding:3px 5px; border-radius:4px" id="btnUploadBannerPic" >  
+        Add a Banner Photo 
+        </a>
+      </div>
+      <div>
+        <input type="submit" id="submitpostid" value="Save" style="font-size:15px;"  />
+      </div>
+    </div>
+    {% endif %}
+  {% endcomment %}
+
+</form>  
+
+{% endif %}
+<!-- end of checking for banner in nroer menu -->
+
+<nav class="row" style="margin-top: 2em;">
+  <dl class="tabs small-12 columns" data-tab data-options="deep_linking:false">
     {% if approval %}
     <dd class="active" title="Enrollment Approval Details">
       <a href="#panel_enrollment_approval_details">
@@ -77,18 +179,18 @@
       </a>
     </dd>
     {% endif %}
-
-    <!--
-    <dd class="{% if not approval %}active{% endif %}" title="Testing Details">
-      <a href="#panel_testing_details">
-        {% trans "Testing" %}
-      </a>
+    
+    <dd class="{% if not approval %}active{% endif %}" >
+      <a onclick="loaddata()" href="#status" name="Status">Activity</a>
     </dd>
-    -->
+    
+    <dd>
+      <a href="#view-scheduler-calendar" name="Calendar">Calendar</a>
+    </dd>
   </dl>
 </nav>
 
-<div id="group_dashboard_details" class="tabs-content" style="border-style: solid; border-width: 1.5px; border-color: #0eacb5; padding: 0px 5px;">
+<div id="group_dashboard_details" class="tabs-content" style="padding: 0px 5px; width:1150px;">
   {% if approval %}
   <!-- Tab: Enrollment Approval Details -->
   <div class="active content row" id="panel_enrollment_approval_details">
@@ -139,21 +241,166 @@
   </div>
   {% endif %}
 
-  {% comment %}
-  <!--
-  <div class="{% if not approval %}active {% endif %}content row" id="panel_testing_details">
-  testing 
+  <div class="content row {% if not approval %}active {% endif %}" id="status" align="center">
   </div>
-  -->
-  {% endcomment %}
+
+  <div class="content row" id="view-scheduler-calendar">
+    {% include "ndf/scheduler_calender.html"  %}
+  </div>
 </div>
 {% endblock %}
 
 {% block script %}
+  {{block.super}}
+  var count = 0;
+  var morecount = 0;
+  var counter = 1;
 
-$(document).on("click", ".checkAllStudents", function(){
-  $(".approveStudent").prop("checked", $(this).is(":checked"));
-});
+  function scrolling(){
+   
+    if ($('#status').hasClass('active')) {
+      
+      $(window).bind('scroll', loadOnScroll);
+      count = 0;
+    }
+  }
+
+  window.onscroll = scrolling;
+
+  var loadOnScroll = function() {
+  if ($(window).scrollTop()+$(window).height() >= $(document).height()) {
+
+      $(window).unbind("scroll");
+    
+      // execute the load function below that will visit the JSON feed and stuff data into the HTML
+      if (count == 0) {
+        loaddata();
+        count = count+1;
+      }
+    }
+  }
+
+  function loaddata() {
+    $(window).unbind();
+    
+    if('{{page}}' != 0) {
+      $.ajax({
+        url: "{% url 'page_scroll' groupid 'counter' %}".replace("counter", counter),
+        type: "GET",
+        datatype: "json",
+      
+        success:function(data){
+          if(String(data)) {
+            // alert(data)
+            $("#status").append(data);
+            counter = counter+1;
+          }
+
+          if(!data) {
+            if(morecount ==0) { 
+              $("#status").append("<h6> No more data to show</h6>");
+              morecount = morecount+1;
+              counter = 2;
+            } 
+          }
+        }
+      });
+    }
+  }
+
+  $("input:not('#docFile')").each(function() {
+    $(this).bind('keydown keypress keyup change', function() {
+      var search = (this.value).toLowerCase();      
+      var resource = (this.name); 
+      var $li = $("#"+resource+"_drawer li.bullet-item").hide();  
+
+      $li.filter(function() {               
+          return $(this).text().toLowerCase().indexOf(search) >= 0;
+      }).show();
+    });
+  });
+
+  $("#btnUploadGroupPic").click(function() {
+
+    $("#groupdocfile").trigger("click");
+  });
+
+  $('#groupdocfile').on("change", function() {
+    $("#pic_div").removeClass("hide");
+
+    file_mime_type = this.files[0].type;
+    if(file_mime_type.indexOf("image/") < 0){
+      $(this).val("");
+      $('#groupdocfile').val(this.value);
+
+      var message = "{% trans 'Only image files should be selected for setting your profile picture!' %}"
+      $("#alertModalLabel").text(message);
+      $("#alertModal").addClass("alert");
+      $("#alertModal").foundation('reveal', 'open');
+
+      $("#pic_div").addClass("hide");
+    }
+  });
+
+  $("#submitpostid").click(function() {
+    if($("#docFile").val() != "") { 
+      $("#message").show();
+      $("#submitpostid").hide();
+    }
+
+    else {
+      var message = "{% trans 'Please select an image to set it as a profile picture !' %}"
+      $("#alertModalLabel").text(message);
+      $("#alertModal").addClass("warning");
+      $("#alertModal").foundation('reveal', 'open');
+
+      $("#pic_div").addClass("hide");
+
+      return false;
+    }
+  });
+
+  $("#btnUploadBannerPic").click(function() {
+
+    $("#docFile").trigger("click");
+  });
+
+  $('#docFile').on("change", function() {
+    $("#pic_div").removeClass("hide");
+
+    file_mime_type = this.files[0].type;
+    if(file_mime_type.indexOf("image/") < 0){
+      $(this).val("");
+      $('#docFile').val(this.value);
+
+      var message = "{% trans 'Only image files should be selected for setting your profile picture!' %}"
+      $("#alertModalLabel").text(message);
+      $("#alertModal").addClass("alert");
+      $("#alertModal").foundation('reveal', 'open');
+
+      $("#pic_div").addClass("hide");
+    }
+  });
+
+  $("#submitpostid").click(function() {
+    if($("#docFile").val() != "") { 
+      $("#message").show();
+      $("#submitpostid").hide();
+    }
+
+    else {
+      var message = "{% trans 'Please select an image to set it as a profile picture !' %}"
+      $("#alertModalLabel").text(message);
+      $("#alertModal").addClass("warning");
+      $("#alertModal").foundation('reveal', 'open');
+
+      $("#pic_div").addClass("hide");
+
+      return false;
+    }
+  });
+
+// ================================================================
 
 $(".detail-view").click(function(event) {
   event.preventDefault();
@@ -199,81 +446,11 @@ $(".detail-view").click(function(event) {
   });
 })
 
-$(document).on("click", ".btnApproval", function() {
-  students_selected = []
-  $(".approveStudent:checked").each(function() {
-    students_selected.push($(this).attr("id"));
-  });
+{% endblock %}
 
-  approval_state = $(this).val();
+{% block document_ready %}
+  {{block.super}}
 
-  if (students_selected.length <= 0) {
-    if (approval_state == "Approve") {
-      $("#alertModalLabel").text("Please select any students for approval !!!");
-    }
-
-    else {
-      $("#alertModalLabel").text("Please select any students for rejection !!!");
-    }
-
-    $("#alertModal").removeClass("success");
-    $("#alertModal").addClass("warning");
-    $("#alertModal").foundation('reveal', 'open');
-
-    return;
-  }
-
-  enrollment_id = $("#enrollment_id").val();
-
-  course_id = $("#course_id").val();
-
-  success_state = false
-  approved = ""
-  rejected = ""
-  remaining = ""
-  $.ajax({
-    url: "{% url 'approve_students' groupid %}",
-
-    data: {
-      'approval_state': approval_state,
-      'enrollment_id': enrollment_id,
-      'course_id': course_id,
-      'students_selected': students_selected,
-      'csrfmiddlewaretoken': "{{csrf_token}}"
-    },
-
-    type: "POST",
-
-    dataType: "json",
-
-    success: function(data) {
-      success_state = data["success"];
-
-      if (success_state) {
-        approved = data["approved"];
-        rejected = data["rejected"];
-        remaining = data["remaining"];
-      }
-
-      else {
-        $("#alertModalLabel").text(data["message"]);
-        $("#alertModal").removeClass("success").removeClass("warning");
-        $("#alertModal").addClass("alert");
-        $("#alertModal").foundation('reveal', 'open');
-      }
-    },
-
-    complete: function() {
-      if (success_state) {
-        $("#"+enrollment_id).find(".Approved").text(approved)
-        $("#"+enrollment_id).find(".Rejected").text(rejected)
-        $("#"+enrollment_id).find(".Remaining").text(remaining)
-
-        $("#approval_accordion").removeClass("active");
-        $("#enrollment_accordion").addClass("active");
-      }
-    },
-  });
-});
+  loaddata();
 
 {% endblock %}

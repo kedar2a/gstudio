@@ -21,12 +21,11 @@ except ImportError:  # old pymongo
     from pymongo.objectid import ObjectId
 
 ''' -- imports from application folders/files -- '''
-# from gnowsys_ndf.ndf.views.methods import *
-# from gnowsys_ndf.ndf.views.file import *
 from gnowsys_ndf.ndf.org2any import org2html
+from gnowsys_ndf.ndf.views.organization import *
 from gnowsys_ndf.ndf.views.course import *
-from gnowsys_ndf.ndf.views.event import *
 from gnowsys_ndf.ndf.views.person import *
+from gnowsys_ndf.ndf.views.enrollment import *
 
 collection = get_database()[Node.collection_name]
 
@@ -82,6 +81,7 @@ def mis_detail(request, group_id, app_id=None, app_set_id=None, app_set_instance
     template = ""
     property_display_order = []
     events_arr = []
+    university_wise_students_count = []
 
     template_prefix = "mis"
 
@@ -150,6 +150,36 @@ def mis_detail(request, group_id, app_id=None, app_set_id=None, app_set_instance
       app_menu = "yes"
       template = "ndf/"+template_prefix+"_list.html"
       title = app_name
+
+      university_gst = collection.Node.one({'_type': "GSystemType", 'name': "University"})
+      student_gst = collection.Node.one({'_type': "GSystemType", 'name': "Student"})
+
+      mis_admin = collection.Node.one(
+          {'_type': "Group", 'name': "MIS_admin"},
+          {'_id': 1}
+      )
+
+      university_cur = collection.Node.find(
+        {'member_of': university_gst._id, 'group_set': mis_admin._id},
+        {'name': 1, 'relation_set.affiliated_college': 1}
+      ).sort('name', 1)
+
+      for each_university in university_cur:
+        affiliated_college_ids_list = []
+        for rel in each_university.relation_set:
+          if rel and "affiliated_college" in rel:
+            affiliated_college_ids_list = rel["affiliated_college"]
+            break
+
+        students_cur = collection.Node.find(
+          {
+            'member_of': student_gst._id,
+            'relation_set.student_belongs_to_college': {'$in': affiliated_college_ids_list}
+          }
+        )
+
+        # university_wise_students_count[each_university.name] = students_cur.count()
+        university_wise_students_count.append((each_university.name, students_cur.count()))
 
     if app_set_instance_id :
         app_set_instance_template = "yes"
@@ -276,6 +306,8 @@ def mis_detail(request, group_id, app_id=None, app_set_id=None, app_set_instance
         app_set_instance_name = system.name
         title =  systemtype.name +"-" +system.name
 
+
+
     variable = RequestContext(request, {
                                         'group_id':group_id, 'groupid':group_id, 'app_name':app_name, 'app_id':app_id,
                                         "app_collection_set":app_collection_set, "app_set_id":app_set_id, 
@@ -286,7 +318,7 @@ def mis_detail(request, group_id, app_id=None, app_set_id=None, app_set_instance
                                         'tags':tags, 'location':location, "content":content, "system_id":system_id,
                                         "system_type":system_type,"mime_type":system_mime_type, "app_set_instance_id":app_set_instance_id,
                                         "node":system, 'group_id':group_id, "property_display_order": property_display_order,
-                                        "events_arr":events_arr
+                                        "events_arr":events_arr, 'university_wise_students_count': university_wise_students_count
                                         })
 
     return render_to_response(template, variable)

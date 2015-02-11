@@ -16,6 +16,7 @@ from mongokit import paginator
 from gnowsys_ndf.settings import GSTUDIO_SITE_VIDEO, EXTRA_LANG_INFO, GAPPS, MEDIA_ROOT
 from gnowsys_ndf.ndf.org2any import org2html
 from gnowsys_ndf.ndf.views.methods import get_node_metadata, get_page, get_node_common_fields, set_all_urls
+from gnowsys_ndf.ndf.views.methods import get_group_name_id
 from gnowsys_ndf.ndf.models import Node, GSystemType, File, GRelation, STATUS_CHOICES, Triple
 
 try:
@@ -68,24 +69,24 @@ def file(request, group_id, file_id=None, page_no=1):
     shelf_list = {}
     auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) }) 
     
-    if auth:
-      has_shelf_RT = collection.Node.one({'_type': 'RelationType', 'name': u'has_shelf' })
-      dbref_has_shelf = has_shelf_RT.get_dbref()
-      shelf = collection_tr.Triple.find({'_type': 'GRelation', 'subject': ObjectId(auth._id), 'relation_type': dbref_has_shelf })        
-      shelf_list = {}
+    # if auth:
+    #   has_shelf_RT = collection.Node.one({'_type': 'RelationType', 'name': u'has_shelf' })
+    #   dbref_has_shelf = has_shelf_RT.get_dbref()
+    #   shelf = collection_tr.Triple.find({'_type': 'GRelation', 'subject': ObjectId(auth._id), 'relation_type': dbref_has_shelf })        
+    #   shelf_list = {}
 
-      if shelf:
-        for each in shelf:
-            shelf_name = collection.Node.one({'_id': ObjectId(each.right_subject)}) 
-            shelves.append(shelf_name)
+    #   if shelf:
+    #     for each in shelf:
+    #         shelf_name = collection.Node.one({'_id': ObjectId(each.right_subject)}) 
+    #         shelves.append(shelf_name)
 
-            shelf_list[shelf_name.name] = []         
-            for ID in shelf_name.collection_set:
-              shelf_item = collection.Node.one({'_id': ObjectId(ID) })
-              shelf_list[shelf_name.name].append(shelf_item.name)
+    #         shelf_list[shelf_name.name] = []         
+    #         for ID in shelf_name.collection_set:
+    #           shelf_item = collection.Node.one({'_id': ObjectId(ID) })
+    #           shelf_list[shelf_name.name].append(shelf_item.name)
 
-      else:
-        shelves = []
+    #   else:
+    #     shelves = []
     # End of user shelf
 
     pandoravideoCollection=collection.Node.find({'member_of':pandora_video_st._id, 'group_set': ObjectId(group_id) })
@@ -359,8 +360,8 @@ def file(request, group_id, file_id=None, page_no=1):
                                  'appId':app._id,
                                  'already_uploaded': already_uploaded,'shelf_list': shelf_list,'shelves': shelves,
                                  # 'sourceid':source_id_set,
-                                 'file_pages': file_pages, 'image_pages': image_pages,
-                                 'doc_pages': doc_pages, 'video_pages': video_pages, "pandora_pages": pandora_pages,
+                                 'file_pages': file_pages, 'image_pages': images_pc.count(),
+                                 'doc_pages': docs_pc.count(), 'video_pages': videos_pc.count(), "pandora_pages": pandoravideoCollection.count(),
                                  'files': files_pc, 'docCollection': docs_pc, 'imageCollection': images_pc,
                                  'videoCollection': videos_pc, 'pandoravideoCollection':pandoravideoCollection, 
                                  'pandoraCollection':get_member_set,'is_video':is_video,'groupid': group_id,
@@ -441,165 +442,170 @@ def paged_file_objs(request, group_id, filetype, page_no):
 
         no_of_objs_pp = 24
 
-        ins_objectid  = ObjectId()
+        # ins_objectid  = ObjectId()
 
-        if ins_objectid.is_valid(group_id) is False :
-            group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-            if group_ins:
-                group_id = str(group_ins._id)
-            else :
-                auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-                if auth :
-                    group_id = str(auth._id)
+        # if ins_objectid.is_valid(group_id) is False :
+        #     group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
+        #     if group_ins:
+        #         group_id = str(group_ins._id)
+        #     else :
+        #         auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+        #         if auth :
+        #             group_id = str(auth._id)
 
-        file_ins = collection.Node.find_one({'_type':"GSystemType", "name":"File"})
-        if file_ins:
-            file_id = str(file_ins._id)
+        group_name, group_id = get_group_name_id(group_id)
 
-        if app == "E-Library":
-            files = collection.Node.find({'$or':[{'member_of': ObjectId(file_id), 
-                                  '_type': 'File', 'fs_file_ids':{'$ne': []}, 
-                                  'group_set': ObjectId(group_id),
-                                  '$or': [{'access_policy': u"PUBLIC"},
-                                            {'$and': [{'access_policy': u"PRIVATE"}, 
-                                                      {'created_by': request.user.id}
-                                                     ]
-                                            }
-                                        ]
-                                 },
-                                 {'member_of': ObjectId(pandora_video_st._id),
-                                  'group_set': ObjectId(group_id)
-                                 }]
-                                 }).sort("last_update", -1)
+        # file_ins = collection.Node.find_one({'_type':"GSystemType", "name":"File"})
+        # if file_ins:
+        #     file_id = str(file_ins._id)
 
-            coll = []
-            for each in files:
-                coll.append(each._id)
+        file_id = GST_FILE._id
 
-            files.rewind()
-            gattr = collection.Node.one({'_type': 'AttributeType', 'name': u'educationaluse'})
+        # if app == "E-Library":
+        #     files = collection.Node.find({'$or':[{'member_of': ObjectId(file_id), 
+        #                           '_type': 'File', 'fs_file_ids':{'$ne': []}, 
+        #                           'group_set': ObjectId(group_id),
+        #                           '$or': [{'access_policy': u"PUBLIC"},
+        #                                     {'$and': [{'access_policy': u"PRIVATE"}, 
+        #                                               {'created_by': request.user.id}
+        #                                              ]
+        #                                     }
+        #                                 ]
+        #                          },
+        #                          {'member_of': ObjectId(pandora_video_st._id),
+        #                           'group_set': ObjectId(group_id)
+        #                          }]
+        #                          }).sort("last_update", -1)
+
+        #     coll = []
+        #     for each in files:
+        #         coll.append(each._id)
+
+        #     files.rewind()
+        #     gattr = collection.Node.one({'_type': 'AttributeType', 'name': u'educationaluse'})
       
         if filetype == "all":
+            
             if app == "File":
                 if GSTUDIO_SITE_VIDEO == "pandora" or GSTUDIO_SITE_VIDEO == "pandora_and_local":
                     result_dict = get_query_cursor_filetype('$all', [ObjectId(file_id)], group_id, request.user.id, page_no, no_of_objs_pp, "all_files")
 
                 else:
                     result_dict = get_query_cursor_filetype('$all', [ObjectId(file_id)], group_id, request.user.id, page_no, no_of_objs_pp)
-            elif app == "E-Library":
-                if files:
-                    result_paginated_cur = files
-                    result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
+            # elif app == "E-Library":
+            #     if files:
+            #         result_paginated_cur = files
+            #         result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
 
-        elif filetype == "doc":
+        elif filetype == "Documents":
             if app == "File":
                 result_dict = get_query_cursor_filetype('$nin', [ObjectId(GST_IMAGE._id), ObjectId(GST_VIDEO._id)], group_id, request.user.id, page_no, no_of_objs_pp)
 
-            elif app == "E-Library":
-                d_Collection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id,"subject": {'$in': coll} ,"object_value": "Documents"}).sort("last_update", -1)
+            # elif app == "E-Library":
+            #     d_Collection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id,"subject": {'$in': coll} ,"object_value": "Documents"}).sort("last_update", -1)
 
-                doc = []
-                for e in d_Collection:
-                    doc.append(e.subject)
+            #     doc = []
+            #     for e in d_Collection:
+            #         doc.append(e.subject)
 
-                result_paginated_cur = collection.Node.find({ '$or':[{'_id': {'$in': doc}},
+            #     result_paginated_cur = collection.Node.find({ '$or':[{'_id': {'$in': doc}},
 
-                            {'member_of': {'$nin': [ObjectId(GST_IMAGE._id), ObjectId(GST_VIDEO._id),ObjectId(pandora_video_st._id)]},
-                                                '_type': 'File', 'group_set': {'$all': [ObjectId(group_id)]},
-                                                'mime_type': {'$not': re.compile("^audio.*")},
-                                                '$or': [
-                                                      {'access_policy': u"PUBLIC"},
-                                                        {'$and': [{'access_policy': u"PRIVATE"}, {'created_by': request.user.id}]}
-                                                       ]
-                                                }]
+            #                 {'member_of': {'$nin': [ObjectId(GST_IMAGE._id), ObjectId(GST_VIDEO._id),ObjectId(pandora_video_st._id)]},
+            #                                     '_type': 'File', 'group_set': {'$all': [ObjectId(group_id)]},
+            #                                     'mime_type': {'$not': re.compile("^audio.*")},
+            #                                     '$or': [
+            #                                           {'access_policy': u"PUBLIC"},
+            #                                             {'$and': [{'access_policy': u"PRIVATE"}, {'created_by': request.user.id}]}
+            #                                            ]
+            #                                     }]
 
-                    }).sort("last_update", -1)
+            #         }).sort("last_update", -1)
 
 
-                result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
+            #     result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
 
-        elif filetype == "image":
+        elif filetype == "Images":
             if app == "File":
                 result_dict = get_query_cursor_filetype('$all', [ObjectId(GST_IMAGE._id)], group_id, request.user.id, page_no, no_of_objs_pp)
-            elif app == "E-Library":
-                img_Collection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id,"subject": {'$in': coll} ,"object_value": "Images"}).sort("last_update", -1)
-                image = []
-                for e in img_Collection:
-                    image.append(e.subject)
+            # elif app == "E-Library":
+            #     img_Collection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id,"subject": {'$in': coll} ,"object_value": "Images"}).sort("last_update", -1)
+            #     image = []
+            #     for e in img_Collection:
+            #         image.append(e.subject)
 
-                # result_paginated_cur = collection.Node.find({'_id': {'$in': image} })    
-                result_paginated_cur = collection.Node.find({'$or': [{'_id': {'$in': image} }, 
+            #     # result_paginated_cur = collection.Node.find({'_id': {'$in': image} })    
+            #     result_paginated_cur = collection.Node.find({'$or': [{'_id': {'$in': image} }, 
 
-                            {'member_of': {'$all': [ObjectId(GST_IMAGE._id)]}, 
-                                                 '_type': 'File', 'group_set': {'$all': [ObjectId(group_id)]},
-                                                 '$or': [
-                                                      {'access_policy': u"PUBLIC"},
-                                                        {'$and': [{'access_policy': u"PRIVATE"}, {'created_by': request.user.id}]}
-                                                       ]
-                                                }]
+            #                 {'member_of': {'$all': [ObjectId(GST_IMAGE._id)]}, 
+            #                                      '_type': 'File', 'group_set': {'$all': [ObjectId(group_id)]},
+            #                                      '$or': [
+            #                                           {'access_policy': u"PUBLIC"},
+            #                                             {'$and': [{'access_policy': u"PRIVATE"}, {'created_by': request.user.id}]}
+            #                                            ]
+            #                                     }]
 
-                    }).sort("last_update", -1)
+            #         }).sort("last_update", -1)
 
-                result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)                
+            #     result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)                
 
-        elif filetype == "video":
+        elif filetype == "Videos":
             if app == "File":
                 result_dict = get_query_cursor_filetype('$all', [ObjectId(GST_VIDEO._id)], group_id, request.user.id, page_no, no_of_objs_pp, "all_videos")
 
-            elif app == "E-Library":
-                vid_Collection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id,"subject": {'$in': coll} ,"object_value": "Videos"}).sort("last_update", -1)
-                video = []
-                for e in vid_Collection:
-                    video.append(e.subject)
+            # elif app == "E-Library":
+            #     vid_Collection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id,"subject": {'$in': coll} ,"object_value": "Videos"}).sort("last_update", -1)
+            #     video = []
+            #     for e in vid_Collection:
+            #         video.append(e.subject)
 
-                result_paginated_cur = collection.Node.find({'$or': [{'_id': {'$in': video} }, 
+            #     result_paginated_cur = collection.Node.find({'$or': [{'_id': {'$in': video} }, 
 
-                          {'member_of': {'$in': [ObjectId(GST_VIDEO._id),ObjectId(pandora_video_st._id)]}, 
-                                                 '_type': 'File', 'access_policy': {'$ne':u"PRIVATE"}, 'group_set': {'$all': [ObjectId(group_id)]},
-                                                 '$or': [
-                                                      {'access_policy': u"PUBLIC"},
-                                                        {'$and': [{'access_policy': u"PRIVATE"}, {'created_by': request.user.id}]}
-                                                       ]
-                                                }]
+            #               {'member_of': {'$in': [ObjectId(GST_VIDEO._id),ObjectId(pandora_video_st._id)]}, 
+            #                                      '_type': 'File', 'access_policy': {'$ne':u"PRIVATE"}, 'group_set': {'$all': [ObjectId(group_id)]},
+            #                                      '$or': [
+            #                                           {'access_policy': u"PUBLIC"},
+            #                                             {'$and': [{'access_policy': u"PRIVATE"}, {'created_by': request.user.id}]}
+            #                                            ]
+            #                                     }]
 
-                    }).sort("last_update", -1)
-
-
-                result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
-
-        elif filetype == "interactives" and app == "E-Library":
-            interCollection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id, "subject": {'$in': coll} ,"object_value": "Interactives"}).sort("last_update", -1)
-            interactive = []
-            for e in interCollection:
-                interactive.append(e.subject)
-
-            result_paginated_cur = collection.Node.find({'_id': {'$in': interactive} })    
-            result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
-
-        elif filetype == "audio" and app == "E-Library":
-            aud_Collection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id,"subject": {'$in': coll} ,"object_value": "Audios"}).sort("last_update", -1)
-
-            audio = []
-            for e in aud_Collection:
-                audio.append(e.subject)
-
-            # result_paginated_cur = collection.Node.find({'_id': {'$in': audio} })  
-
-            result_paginated_cur = collection.Node.find({ '$or':[{'_id': {'$in': audio}},
-
-                      {'member_of': {'$nin': [ObjectId(GST_IMAGE._id), ObjectId(GST_VIDEO._id)]},
-                                                '_type': 'File', 'group_set': {'$all': [ObjectId(group_id)]},
-                                                'mime_type': {'$regex': 'audio','$options': "i"},
-                                                '$or': [
-                                                      {'access_policy': u"PUBLIC"},
-                                                        {'$and': [{'access_policy': u"PRIVATE"}, {'created_by': request.user.id}]}
-                                                       ]
-                                                }]
-
-                    }).sort("last_update", -1)
+            #         }).sort("last_update", -1)
 
 
-            result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
+            #     result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
+
+        # elif filetype == "interactives" and app == "E-Library":
+        #     interCollection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id, "subject": {'$in': coll} ,"object_value": "Interactives"}).sort("last_update", -1)
+        #     interactive = []
+        #     for e in interCollection:
+        #         interactive.append(e.subject)
+
+        #     result_paginated_cur = collection.Node.find({'_id': {'$in': interactive} })    
+        #     result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
+
+        # elif filetype == "audio" and app == "E-Library":
+        #     aud_Collection = collection.Node.find({'_type': "GAttribute", 'attribute_type.$id': gattr._id,"subject": {'$in': coll} ,"object_value": "Audios"}).sort("last_update", -1)
+
+        #     audio = []
+        #     for e in aud_Collection:
+        #         audio.append(e.subject)
+
+        #     # result_paginated_cur = collection.Node.find({'_id': {'$in': audio} })  
+
+        #     result_paginated_cur = collection.Node.find({ '$or':[{'_id': {'$in': audio}},
+
+        #               {'member_of': {'$nin': [ObjectId(GST_IMAGE._id), ObjectId(GST_VIDEO._id)]},
+        #                                         '_type': 'File', 'group_set': {'$all': [ObjectId(group_id)]},
+        #                                         'mime_type': {'$regex': 'audio','$options': "i"},
+        #                                         '$or': [
+        #                                               {'access_policy': u"PUBLIC"},
+        #                                                 {'$and': [{'access_policy': u"PRIVATE"}, {'created_by': request.user.id}]}
+        #                                                ]
+        #                                         }]
+
+        #             }).sort("last_update", -1)
+
+
+        #     result_pages = paginator.Paginator(result_paginated_cur, page_no, no_of_objs_pp)
 
         if app == "File":
             result_cur = result_dict["result_cur"]
@@ -731,7 +737,14 @@ def save_file(files,title, userid, group_id, content_org, tags, img_type = None,
     """
       this will create file object and save files in gridfs collection
     """
-    global count,first_object
+    
+    global count, first_object
+    
+    # overwritting count and first object by sending arguments kwargs (count=0, first_object="") 
+    # this is to prevent from forming collection of first object containing subsequent objects.
+    count = kwargs["count"] if kwargs.has_key("count") else count
+    first_object = kwargs["first_object"] if kwargs.has_key("first_object") else first_object
+    
     is_video = ""
     fcol = get_database()[File.collection_name]
     fileobj = fcol.File()
@@ -739,7 +752,6 @@ def save_file(files,title, userid, group_id, content_org, tags, img_type = None,
     files.seek(0)
     size, unit = getFileSize(files)
     size = {'size':round(size, 2), 'unit':unicode(unit)}
-    
     
     if fileobj.fs.files.exists({"md5":filemd5}):
         coll_oid = get_database()['fs.files']
@@ -802,7 +814,10 @@ def save_file(files,title, userid, group_id, content_org, tags, img_type = None,
                     # Required to link temporary files with the current user who is modifying this document
                     filename_content = slugify(title) + "-" + usrname + "-"
                     fileobj.content = org2html(content_org, file_prefix = filename_content)
-                fileobj.tags = [unicode(t.strip()) for t in tags.split(",") if t != ""]
+
+                if not type(tags) is list:
+                    tags = [unicode(t.strip()) for t in tags.split(",") if t != ""]
+                fileobj.tags = tags
             
             fileobj.save()
             files.seek(0)                                                                  #moving files cursor to start

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.conf.urls import patterns, include, url
 from django.contrib import admin
 from django.conf.urls import *
@@ -6,12 +7,16 @@ from django.views.generic import RedirectView
 from django.views.generic import TemplateView
 
 from registration.backends.default.views import RegistrationView
+from registration.backends.default.views import ActivationView
+from registration_email.forms import EmailRegistrationForm
+from jsonrpc import jsonrpc_site
 
 from gnowsys_ndf.ndf.views.email_registration import password_reset_email, password_reset_error
 from gnowsys_ndf.ndf.forms import *
 from gnowsys_ndf.ndf.views.home import HomeRedirectView, homepage
 from gnowsys_ndf.ndf.views.methods import tag_info
 from gnowsys_ndf.ndf.views.custom_app_view import custom_app_view, custom_app_new_view
+from gnowsys_ndf.ndf.views import rpc_resources
 
 admin.autodiscover()
 
@@ -62,13 +67,23 @@ urlpatterns = patterns('',
     (r'^(?P<group_id>[^/]+)/ratings', include('gnowsys_ndf.ndf.urls.ratings')),                 
     (r'^(?P<group_id>[^/]+)/topics', include('gnowsys_ndf.ndf.urls.topics')),
 
+    # -- django-json-rpc method calls --
+    url(r'^json/browse/$', 'jsonrpc.views.browse', name='jsonrpc_browser'),
+    url(r'^json/$', jsonrpc_site.dispatch, name='jsonrpc_mountpoint'),
+    # url for directly calling RPC method from browser
+    (r'^json/(?P<method>[a-zA-Z0-9.-_]+)$', jsonrpc_site.dispatch),
+    # ---end of django-json-rpc
+
     url(r'^(?P<group_id>[^/]+)/topic_details/(?P<app_Id>[\w-]+)', 'gnowsys_ndf.ndf.views.topics.topic_detail_view', name='topic_details'),
 
     (r'^(?P<group_id>[^/]+)/e-library', include('gnowsys_ndf.ndf.urls.e-library')),
     (r'^(?P<group_id>[^/]+)/term', include('gnowsys_ndf.ndf.urls.term')),
-    (r'^(?P<group_id>[^/]+)/mis', include('gnowsys_ndf.ndf.urls.mis', namespace='mis'), {'app_name': "MIS"}),
     (r'^(?P<group_id>[^/]+)/event', include('gnowsys_ndf.ndf.urls.event')),
+
+    # -- mis --
+    (r'^(?P<group_id>[^/]+)/mis', include('gnowsys_ndf.ndf.urls.mis', namespace='mis'), {'app_name': "MIS"}),
     (r'^(?P<group_id>[^/]+)/mis-po', include('gnowsys_ndf.ndf.urls.mis', namespace='mis-po'), {'app_name': "MIS-PO"}),
+    # ---end of mis
 
     # meeting app
     # (r'^online/', include('online_status.urls')),   #for online_users.
@@ -80,7 +95,7 @@ urlpatterns = patterns('',
     
     (r'^(?P<group_id>[^/]+)/data-review', include('gnowsys_ndf.ndf.urls.data_review')),
     (r'^(?P<group_id>[^/]+)/observation', include('gnowsys_ndf.ndf.urls.observation')),
-    (r'^(?P<group_id>[^/]+)/Observations', include('gnowsys_ndf.ndf.urls.observation')),
+    # (r'^(?P<group_id>[^/]+)/Observations', include('gnowsys_ndf.ndf.urls.observation')),
 
     # --discussion--
     url(r'^(?P<group_id>[^/]+)/(?P<node_id>[^/]+)/create_discussion$', 'gnowsys_ndf.ndf.views.methods.create_discussion', name='create_discussion'),    
@@ -88,21 +103,25 @@ urlpatterns = patterns('',
     url(r'^(?P<group_id>[^/]+)/discussion_delete_reply$', 'gnowsys_ndf.ndf.views.methods.discussion_delete_reply', name='discussion_delete_reply'),    
     # --end of discussion
 
-    #url(r'^(?P<group_id>[^/]+)/visualize', 'gnowsys_ndf.ndf.views.visualize.graphs', name='visualize'),
     url(r'^(?P<group_id>[^/]+)/visualize', include('gnowsys_ndf.ndf.urls.visualise_urls')),
     
     url(r'^(?P<group_id>[^/]+)/$', 'gnowsys_ndf.ndf.views.group.group_dashboard', name='groupchange'),    
-    #(r'^(?P<group_id>[^/]+)/', include('gnowsys_ndf.ndf.urls.group')),
-    url(r'^(?P<group_id>[^/]+)/annotationlibInSelText$', 'gnowsys_ndf.ndf.views.ajax_views.annotationlibInSelText', name='annotationlibInSelText'),
-    url(r'^(?P<group_id>[^/]+)/delComment$', 'gnowsys_ndf.ndf.views.ajax_views.delComment', name='delComment'),
+
+    # -- annotations --
+    # url(r'^(?P<group_id>[^/]+)/annotationlibInSelText$', 'gnowsys_ndf.ndf.views.ajax_views.annotationlibInSelText', name='annotationlibInSelText'),
+    # url(r'^(?P<group_id>[^/]+)/delComment$', 'gnowsys_ndf.ndf.views.ajax_views.delComment', name='delComment'),
+    # ---end of annotations
+
     url(r'^(?P<group_id>[^/]+)/tags/(?P<tagname>[^/]+)$','gnowsys_ndf.ndf.views.methods.tag_info', name='tag_info'),
 
+    # -- custom apps --
     (r'^(?P<group_id>[^/]+)/(?P<app_name>[^/]+)', include('gnowsys_ndf.ndf.urls.custom_app')),    
     # url(r'^(?P<group_id>[^/]+)/(?P<app_name>[^/]+)/(?P<app_id>[\w-]+)$', custom_app_view, name='GAPPS'),       
     # url(r'^(?P<group_id>[^/]+)/(?P<app_name>[^/]+)/(?P<app_id>[\w-]+)/(?P<app_set_id>[\w-]+)$', custom_app_view, name='GAPPS_set'),
     # url(r'^(?P<group_id>[^/]+)/(?P<app_name>[^/]+)/(?P<app_id>[\w-]+)/(?P<app_set_id>[\w-]+)/(?P<app_set_instance_id>[\w-]+)$', custom_app_view, name='GAPPS_set_instance'),
     # url(r'^(?P<group_id>[^/]+)/(?P<app_name>[^/]+)/(?P<app_id>[\w-]+)/(?P<app_set_id>[\w-]+)/(?P<app_set_instance_id>[\w-]+)/edit/$', custom_app_new_view, name='GAPPS_set_instance_edit'),
     # url(r'^(?P<group_id>[^/]+)/(?P<app_name>[^/]+)/(?P<app_id>[\w-]+)/(?P<app_set_id>[\w-]+)/new/$', custom_app_new_view, name='GAPPS_set_new_instance'),
+    # --- end of custom apps
     
     # (r'^home','gnowsys_ndf.ndf.views.group.group_dashboard'),
     # (r'^home/', 'gnowsys_ndf.ndf.views.home.homepage'),
@@ -125,8 +144,25 @@ urlpatterns = patterns('',
         },
         name='password_reset'
     ),
-    (r'^accounts/', include('registration_email.backends.default.urls')),
-    url(r'^accounts/register/$', RegistrationView.as_view(form_class=UserRegistrationForm)),
+
+    url(r'^accounts/activate/(?P<activation_key>\w+)/$',
+        ActivationView.as_view(
+            template_name='registration/activation_complete.html',
+            get_success_url=getattr(
+                settings, 'REGISTRATION_EMAIL_ACTIVATE_SUCCESS_URL',
+                lambda request, user: '/accounts/activate/complete/'),
+        ),
+        name='registration_activate'),
+    url(r'^accounts/register/$',
+        RegistrationView.as_view(
+            form_class=EmailRegistrationForm,
+            get_success_url=getattr(
+                settings, 'REGISTRATION_EMAIL_REGISTER_SUCCESS_URL',
+                lambda request, user: '/accounts/register/complete/'),
+        ),
+        name='registration_register'),
+
+    url(r'^accounts/', include('registration_email.backends.default.urls')),
    # --end of django-registration
 
     url(r'^Beta/', TemplateView.as_view(template_name= 'gstudio/beta.html'), name="beta"),

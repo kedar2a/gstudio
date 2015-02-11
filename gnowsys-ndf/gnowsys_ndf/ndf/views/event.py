@@ -41,14 +41,19 @@ def event(request, group_id):
  else :
     pass
  #view written just to show the landing page of the events
+ group_inverse_rel_id = [] 
  Group_type=collection.Node.one({'_id':ObjectId(group_id)})
- Group_name=collection.Node.one({'_type':'GSystem','name':unicode(Group_type.name)})
+ for i in Group_type.relation_set:
+     if unicode("group_of") in i.keys():
+        group_inverse_rel_id = i['group_of']
+ Group_name = collection.Node.one({'_type':'GSystem','_id':{'$in':group_inverse_rel_id}})
  Eventtype='Eventtype'
  if Group_name:
-      if (any( unicode('has_group') in d for d in Group_name.relation_set)) == True:
-           Eventtype='CollegeEvents'     
-      else:
-           Eventtype='Eventtype'
+
+    if (any( unicode('has_group') in d for d in Group_name.relation_set)) == True:
+         Eventtype='CollegeEvents'     
+    else:
+         Eventtype='Eventtype'
       
  Glisttype=collection.Node.find({"name":"GList"})
  #bug
@@ -57,14 +62,30 @@ def event(request, group_id):
  Event_Types = collection.Node.one({"member_of":ObjectId(Glisttype[0]["_id"]),"name":unicode(Eventtype)},{'collection_set': 1})
  
  app_collection_set=[]
+ Mis_admin_list=[]
+ #check for the mis group Admin
+ #check for exam session to be created only by the Mis_Admin
+
+ Add=""
+ Mis_admin=collection.Node.one({"_type":"Group","name":"MIS_admin"})
+ if  Mis_admin:
+    Mis_admin_list=Mis_admin.group_admin
+    Mis_admin_list.append(Mis_admin.created_by)
+    if request.user.id in Mis_admin_list:
+        Add="Allow"  
+    else: 
+        Add= "Stop"
+ else:
+    Add="Stop"       
+
  if Event_Types:
     for eachset in Event_Types.collection_set:
           app_collection_set.append(collection.Node.one({"_id": eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))      
  return render_to_response('ndf/event.html',{'app_collection_set':app_collection_set,
                                              'groupid':group_id,
                                              'group_id':group_id,
-                                             'group_name':group_id
-                                                        
+                                             'group_name':group_id,
+                                             'Add':Add
                                             },
                               context_instance = RequestContext(request)
                           )
@@ -94,18 +115,23 @@ def event_detail(request, group_id, app_id=None, app_set_id=None, app_set_instan
       app_id = str(app._id)
   else:'''
   app = collection.Node.one({'_id': ObjectId(app_id)})
-
+  
   #app_name = app.name 
 
   app_set = ""
   app_collection_set = []
   title = ""
-
+  marks_enter= ""
+   
   event_gst = None
   event_gs = None
-
+  reschedule = True
+  reschedule_time = ""
+  event_task_date_reschedule = ""
+  event_task_Attendance_reschedule = ""
+  marks=""
   property_order_list = []
-
+  
   #template_prefix = "mis"
 
   if request.user:
@@ -119,10 +145,16 @@ def event_detail(request, group_id, app_id=None, app_set_id=None, app_set_instan
   '''
   # for eachset in app.collection_set:
   #   app_collection_set.append(collection.Node.one({"_id":eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))
+  group_inverse_rel_id = []
   Group_type=collection.Node.one({'_id':ObjectId(group_id)})
-  Group_name=collection.Node.one({'_type':'GSystem','name':unicode(Group_type.name)})
+  for i in Group_type.relation_set:
+       if unicode("group_of") in i.keys():
+          group_inverse_rel_id = i['group_of']
+  
+  Group_name = collection.Node.one({'_type':'GSystem','_id':{'$in':group_inverse_rel_id}})
   Eventtype='Eventtype'
   if Group_name:
+
       if (any( unicode('has_group') in d for d in Group_name.relation_set)) == True:
            Eventtype='CollegeEvents'     
       else:
@@ -149,7 +181,7 @@ def event_detail(request, group_id, app_id=None, app_set_id=None, app_set_instan
       # nodes = list(collection.Node.find({'name':{'$regex':search, '$options': 'i'},'member_of': {'$all': [event_gst._id]}}))
       nodes = collection.Node.find({'member_of': event_gst._id, 'name': {'$regex': search, '$options': 'i'}})
     else:
-      nodes = collection.Node.find({'member_of': event_gst._id, 'group_set': ObjectId(group_id)})
+      nodes = collection.Node.find({'member_of': event_gst._id, 'group_set': ObjectId(group_id)}).sort('last_update', -1)
       
   node = None
   marks_list=[]
@@ -165,6 +197,22 @@ def event_detail(request, group_id, app_id=None, app_set_id=None, app_set_instan
     node.get_neighbourhood(node.member_of)
     course=[]
     val=False
+    
+    for i in node.attribute_set:
+       if unicode('event_edit_reschedule') in i.keys():
+          try: 
+           if (unicode('reschedule_till') in i['event_edit_reschedule']) == True:
+              reschedule_time = i['event_edit_reschedule']['reschedule_till']  
+           if (unicode('reschedule_allow') in i['event_edit_reschedule']):    
+              reschedule = i['event_edit_reschedule']['reschedule_allow']
+          except:
+               pass
+       if (unicode('event_attendance_task')) in i.keys():
+           event_task_Attendance_reschedule = i['event_attendance_task']['Reschedule_Task']
+            
+       if(unicode('event_date_task')) in i.keys():
+           event_task_date_reschedule = i['event_date_task']['Reschedule_Task']     
+                
     for i in node.relation_set:
        if unicode('event_has_batch') in i.keys():
             batch=collection.Node.one({'_type':"GSystem",'_id':ObjectId(i['event_has_batch'][0])})
@@ -175,20 +223,42 @@ def event_detail(request, group_id, app_id=None, app_set_id=None, app_set_instan
                    for i in  announced_course.relation_set:
                       if unicode('announced_for') in i.keys():
                             course=collection.Node.one({"_type":"GSystem",'_id':ObjectId(i['announced_for'][0])})
-                             
             batch=batch.name
-            
-       #   print "\n node.keys(): ", node.keys(), "\n"
+       elif unicode('session_of') in i.keys():
+            event_has_session = collection.Node.one({'_type':"GSystem",'_id':ObjectId(i['session_of'][0])})
+            session_node = collection.Node.one({'_id':ObjectId(event_has_session._id)},{'attribute_set':1})
+
+           
+  #   print "\n node.keys(): ", node.keys(), "\n"
   # default_template = "ndf/"+template_prefix+"_create_edit.html"
+  Mis_admin=collection.Node.one({"_type":"Group","name":"MIS_admin"})
+  if  Mis_admin:
+    Mis_admin_list=Mis_admin.group_admin
+    Mis_admin_list.append(Mis_admin.created_by)
+    if request.user.id in Mis_admin_list:
+        Add = "Allow"  
+    else: 
+        Add = "Stop"
+  else:
+    Add="Stop"       
+  #fecth the data
+      
   context_variables = { 'groupid': group_id, 
                         'app_id': app_id,'app_collection_set': app_collection_set, 
                         'app_set_id': app_set_id,
                         'title':title,
                         'nodes': nodes, 'node': node,
-                        'event_gst':event_gst.name
-                        # 'property_order_list': property_order_list
+                        'event_gst':event_gst.name,
+                        'Add':Add,
+                        'reschedule_time' : reschedule_time,
+                        'reschedule'    : reschedule, 
+                        'task_date' : event_task_date_reschedule,
+                        'task_attendance' : event_task_Attendance_reschedule,
+                        'Eventtype':Eventtype, 
+                         # 'property_order_list': property_order_list
                       }
 
+  
   if batch :
       context_variables.update({'batch':batch}) 
       if course:
@@ -199,6 +269,18 @@ def event_detail(request, group_id, app_id=None, app_set_id=None, app_set_instan
     # template = "ndf/fgh.html"
     # default_template = "ndf/dsfjhk.html"
     # return render_to_response([template, default_template], 
+
+  if session_node:
+    session_min_marks = ""
+    session_max_marks = ""
+    for attr in session_node.attribute_set:
+      if attr and u"min_marks" in attr:
+        session_min_marks = attr[u"min_marks"]
+      elif attr and u"max_marks" in attr:
+        session_max_marks = attr[u"max_marks"]
+    context_variables.update({'session_min_marks':session_min_marks})
+    context_variables.update({'session_max_marks':session_max_marks})
+
   return render_to_response(template, 
                               context_variables,
                               context_instance = RequestContext(request)
@@ -237,7 +319,11 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
   app_set = ""
   app_collection_set = []
   title = ""
-
+  session_of=""
+  module=""
+  Add=""
+  announced_course =""
+  batch =""
   event_gst = None
   event_gs = None
 
@@ -254,8 +340,13 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
       for eachset in Event_Types.collection_set:
         app_collection_set.append(collection.Node.one({"_id": eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))      
   '''
+
+  group_inverse_rel_id = [] 
   Group_type=collection.Node.one({'_id':ObjectId(group_id)})
-  Group_name=collection.Node.one({'_type':'GSystem','name':unicode(Group_type.name)})
+  for i in Group_type.relation_set:
+       if unicode("group_of") in i.keys():
+          group_inverse_rel_id = i['group_of']
+  Group_name = collection.Node.one({'_type':'GSystem','_id':{'$in':group_inverse_rel_id}})
   Eventtype='Eventtype'
   if Group_name:
 
@@ -263,7 +354,6 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
            Eventtype='CollegeEvents'     
       else:
            Eventtype='Eventtype'
-
   Glisttype=collection.Node.find({"name":"GList"})
   Event_Types = collection.Node.one({"member_of":ObjectId(Glisttype[0]["_id"]),"name":Eventtype},{'collection_set': 1})
   app_collection_set=[]
@@ -274,7 +364,9 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
   # for eachset in app.collection_set:
   #   app_collection_set.append(collection.Node.one({"_id":eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))
   iteration=request.POST.get("iteration","")
-  for i in range(1):
+  if iteration == "":
+        iteration=1
+  for i in range(int(iteration)):
    if app_set_id:
      event_gst = collection.Node.one({'_type': "GSystemType", '_id': ObjectId(app_set_id)}, {'name': 1, 'type_of': 1})
      title = event_gst.name
@@ -284,7 +376,7 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
    if app_set_instance_id:
      event_gs = collection.Node.one({'_type': "GSystem", '_id': ObjectId(app_set_instance_id)})
    property_order_list = get_property_order_with_value(event_gs)#.property_order
-  
+   
    if request.method == "POST":
     # [A] Save event-node's base-field(s)
     # print "\n Going before....", type(event_gs), "\n event_gs.keys(): ", event_gs.keys()
@@ -298,7 +390,10 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
       # Remove this when publish button is setup on interface
       event_gs.status = u"PUBLISHED"
     if (request.POST.get("name","")) == "":
-        name=slugify(request.POST.get("course_type",""))+ "--"+ slugify(request.POST.get("course_name",""))+ "--"+slugify           (request.POST.get("Module_name",""))+ "--"+slugify(request.POST.get("Session",""))
+        if event_gst.name == "Exam":
+           name=slugify(request.POST.get("course_type",""))+ "--"+ slugify(request.POST.get("course_name",""))+ "--"+slugify           (request.POST.get("batch_name",""))
+        else:
+           name=slugify(request.POST.get("course_type",""))+ "--"+ slugify(request.POST.get("course_name",""))+ "--"+slugify           (request.POST.get("Module_name",""))+ "--"+slugify(request.POST.get("Session",""))
         event_gs.name=name 
     
     event_gs.save(is_changed=is_changed)
@@ -343,7 +438,7 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
 
               if "date_month_day_year" in field_instance["validators"]:
                      if i>0:
-                       field_value=request.POST.get(field_instance["name"]+"_"+"1")  
+                       field_value=request.POST.get(field_instance["name"]+"_"+str(i))  
                      else:
                         field_value = request.POST[field_instance["name"]]
                         
@@ -370,8 +465,8 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
               for i, field_value in enumerate(field_value_list):
                 field_value = parse_template_data(field_data_type, field_value, field_instance=field_instance, date_format_string="%d/%m/%Y %H:%M")
                 field_value_list[i] = field_value
-
-              event_gs_triple_instance = create_grelation(event_gs._id, collection.RelationType(field_instance), field_value_list)
+              if field_value_list:
+                event_gs_triple_instance = create_grelation(event_gs._id, collection.RelationType(field_instance), field_value_list)
               # if isinstance(event_gs_triple_instance, list):
               #   print "\n"
               #   for each in event_gs_triple_instance:
@@ -382,7 +477,7 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
               #   print "\n event_gs_triple_instance: ", event_gs_triple_instance._id, " -- ", event_gs_triple_instance.name
     # return HttpResponseRedirect(reverse('page_details', kwargs={'group_id': group_id, 'app_id': page_node._id }))
     '''return HttpResponseRedirect(reverse(app_name.lower()+":"+template_prefix+'_app_detail', kwargs={'group_id': group_id, "app_id":app_id, "app_set_id":app_set_id}))'''
-    if i==0:
+    if i==( (int(iteration))-1):
      return HttpResponseRedirect(reverse('event_app_instance_detail', kwargs={'group_id': group_id,"app_set_id":app_set_id,"app_set_instance_id":event_gs._id}))
   event_gs.get_neighbourhood(event_gs.member_of)
   course=[]
@@ -401,6 +496,17 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
                 session_of=collection.Node.one({'_type':"GSystem",'_id':ObjectId(i['session_of'][0])})                     
                 module=collection.Node.one({'_type':"GSystem",'_id':{'$in':session_of.prior_node}})
   event_gs.event_coordinator
+  Mis_admin=collection.Node.one({"_type":"Group","name":"MIS_admin"})
+  if  Mis_admin:
+    Mis_admin_list=Mis_admin.group_admin
+    Mis_admin_list.append(Mis_admin.created_by)
+    if request.user.id in Mis_admin_list:
+        Add="Allow"  
+    else: 
+        Add= "Stop"
+  else:
+    Add="Stop"       
+
     
   if event_gst.name == u'Classroom Session' or event_gst.name == u'Exam':
      template="ndf/Nussd_event_Schedule.html"
@@ -411,32 +517,40 @@ def event_create_edit(request, group_id, app_set_id=None, app_set_instance_id=No
                         'app_collection_set': app_collection_set, 
                         'app_set_id': app_set_id,
                         'title':title,
-                        'property_order_list': property_order_list
-                        
+                        'property_order_list': property_order_list,
+                        'Add':Add
                       }
 
   if app_set_instance_id:
     event_detail={}
     events={}
-    event_detail["cordinatorname"]=str(event_gs.event_coordinator[0].name) 
-    event_detail["cordinatorid"]=str(event_gs.event_coordinator[0]._id)
-    events["cordinator"]=event_detail
-    event_detail["course"]=str(announced_course.name) 
-    event_detail["course_id"]=str(announced_course._id)
-    events["course"]=event_detail
+    if event_gs.event_coordinator:
+      event_detail["cordinatorname"]=str(event_gs.event_coordinator[0].name) 
+      event_detail["cordinatorid"]=str(event_gs.event_coordinator[0]._id)
+      events["cordinator"]=event_detail
+    if announced_course:
+      event_detail["course"]=str(announced_course.name) 
+      event_detail["course_id"]=str(announced_course._id)
+      events["course"]=event_detail
     event_detail={}
-    event_detail["batchname"]=str(batch.name)
-    event_detail["batchid"]=str(batch._id)
-    events["batch"]=event_detail
+    if batch:  
+      event_detail["batchname"]=str(batch.name)
+      event_detail["batchid"]=str(batch._id)
+      events["batch"]=event_detail
     event_detail={}
-    event_detail["sessionname"]=str(session_of.name)
-    event_detail["sessionid"]=str(session_of._id)
-    events["session"]=event_detail
+    if session_of:
+       event_detail["sessionname"]=str(session_of.name)
+       event_detail["sessionid"]=str(session_of._id)
+       for i in session_of.attribute_set:
+         if unicode('course_structure_minutes') in i.keys():
+          event_detail["sessionminutes"] = str(i['course_structure_minutes'])
+       
+       events["session"]=event_detail
     event_detail={}
-    event_detail["Modulename"]=str(module.name)
-    event_detail["Moduleid"]=str(module._id)
-    events["Module"]=event_detail
-
+    if module:
+       event_detail["Modulename"]=str(module.name)
+       event_detail["Moduleid"]=str(module._id)
+       events["Module"]=event_detail
     context_variables['node'] = event_gs
     context_variables['edit_details']=events
     
