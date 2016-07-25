@@ -372,8 +372,8 @@ class Node(DjangoDocument):
         else:
             member_of = []
         self.member_of = member_of
-        # if member_of and not isinstance(member_of, list):
-        #     self.member_of = [ObjectId(each) for each in member_of]
+        if member_of and not isinstance(member_of, list):
+            self.member_of = [ObjectId(each) for each in member_of]
 
         # 'access_policy': unicode
         if kwargs.has_key('access_policy'):
@@ -393,8 +393,8 @@ class Node(DjangoDocument):
         # 'created_by': int
         if not self.created_by:
             if kwargs.has_key('created_by'):
-                created_by = kwargs.get('created_by',0)
-            elif request:
+                created_by = kwargs.get('created_by', 0)
+            elif request and hasattr(request, 'user'):
                 created_by = request.user.id
             else:
                 created_by = 0
@@ -403,13 +403,13 @@ class Node(DjangoDocument):
         # 'modified_by': int, # test required: only ids of Users
         if kwargs.has_key('modified_by'):
             modified_by = kwargs.get('modified_by', 0)
-        elif request:
-            if hasattr(request, 'user'):
-                modified_by = request.user.id
-            elif kwargs.has_key('created_by'):
-                modified_by = created_by
+        # elif request:
+        #     if hasattr(request, 'user'):
+        #         modified_by = request.user.id
+        #     elif kwargs.has_key('created_by'):
+        #         modified_by = created_by
         else:
-            modified_by = 0
+            modified_by = self.created_by
         self.modified_by = int(modified_by) if modified_by else 0
 
         # 'contributors': [int]
