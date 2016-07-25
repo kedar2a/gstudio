@@ -823,6 +823,11 @@ GSTUDIO_INSTITUTE_ID = ''
 # following has to be at last
 # just put every thing above it
 
+#*******MIO_SETTINGS*************
+GSTUDIO_MIO_FROM_EMAIL = ''
+GSTUDIO_MIO_FROM_EMAIL_PASSWORD = ''
+#*********************************
+
 try:
     from local_settings import *
     # print "Local settings applied"
