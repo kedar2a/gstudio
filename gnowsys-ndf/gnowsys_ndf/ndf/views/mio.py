@@ -7,42 +7,50 @@ import sys
 import imaplib
 import shutil
 import datetime
+import urllib
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.header import Header
 from email.mime.message import MIMEMessage
-import urllib
 from HTMLParser import HTMLParser
-from gnowsys_ndf.ndf.models import * 
+
 from django.http import HttpRequest
 from django.contrib.auth.models import User
-from gnowsys_ndf.settings import GSTUDIO_LOGS_DIR_PATH,GSTUDIO_MIO_FROM_EMAIL,GSTUDIO_MIO_FROM_EMAIL_PASSWORD,DEFAULT_FROM_EMAIL,GSTUDIO_SITE_NAME
-from gnowsys_ndf.ndf.views.filehive import *
-from gnowsys_ndf.ndf.views.methods import create_grelation
-from gnowsys_ndf.ndf.views.methods import get_group_name_id
 from django.shortcuts import render
 
+from gnowsys_ndf.ndf.models import *
+from gnowsys_ndf.settings import GSTUDIO_LOGS_DIR_PATH, GSTUDIO_SITE_NAME
+from gnowsys_ndf.settings import GSTUDIO_MIO_FROM_EMAIL, GSTUDIO_MIO_FROM_EMAIL_PASSWORD, DEFAULT_FROM_EMAIL
+from gnowsys_ndf.ndf.views.filehive import *
+from gnowsys_ndf.ndf.views.methods import get_group_name_id, create_grelation
+
+
 User_object = None
-error_message = {"Page name required":1,
-				"Page Content required":2,
-				"User details required":3,
-				"already exists":4,
-				"User does not exist":5,
-				"User authenticated":6,
-				"User not a member of this group":7,
-				"Group does not exist":8}
+
+error_message = {
+					"Page name required": 1,
+					"Page Content required": 2,
+					"User details required": 3,
+					"already exists": 4,
+					"User does not exist": 5,
+					"User authenticated": 6,
+					"User not a member of this group": 7,
+					"Group does not exist": 8
+				}
 
 #EXTRACTING EMAILID AND PASSWORD FROM THE SETTINGS.PY FILE
 mio_from_email = ''
 mio_from_password  = ''
 
-if GSTUDIO_MIO_FROM_EMAIL!='':
+if GSTUDIO_MIO_FROM_EMAIL != '':
 	mio_from_email = GSTUDIO_MIO_FROM_EMAIL
 	mio_from_password = GSTUDIO_MIO_FROM_EMAIL_PASSWORD
 else:
 	mio_from_email = DEFAULT_FROM_EMAIL
 	mio_from_password = ''
 #************************************************************
+
 
 def authenticate_user(mail,group_name):
 	global User_object
@@ -52,16 +60,22 @@ def authenticate_user(mail,group_name):
 		id = User_object.id
 		if not group_name:
 			group_name = User_object.username
-	except:
-		return id,False,error_message["User does not exist"],group_name
+	except Exception, e:
+		print e
+		return id, False, error_message["User does not exist"], group_name
 
-	auth_obj = get_group_name_id(group_name, get_obj=True)
-	if id in auth_obj.author_set or id in auth_obj.contributors:
+	group_obj = get_group_name_id(group_name, get_obj=True)
+
+	if not group_obj:
+		group_obj = get_group_name_id(User_object.username, get_obj=True)
+
+	if id in group_obj.author_set or id in group_obj.contributors:
 		return id,True,error_message["User authenticated"],group_name
 	else:
 		return id,False,error_message["User not a member of this group"],group_name
 
-def create_page(**kwargs): 
+
+def create_page(**kwargs):
 	global User_object
 	p = node_collection.collection.GSystem()
 
@@ -69,7 +83,7 @@ def create_page(**kwargs):
 		created_by = kwargs.get('created_by','')
 	else:
 		return error_message["User details required"]
-	
+
 	if kwargs.has_key('group_name'):
 		group_name = kwargs.get('group_name',User_object.username)
 	else:
@@ -94,7 +108,7 @@ def create_page(**kwargs):
 
 	gst_page = node_collection.one({'_type':u'GSystemType','name':u'Page'})
 	gst_group = get_group_name_id(group_name, get_obj=True)
-	
+
 	available_nodes = node_collection.find({'_type': u'GSystem', 'member_of': ObjectId(gst_page._id),
 		'group_set': ObjectId(gst_group._id)})
 
@@ -114,6 +128,7 @@ def create_page(**kwargs):
 			print "Exception in while creating page from mail:  " + str(e)
 		return str(p._id);
 
+
 def send_page(to_user,page_name,page_content,subject,m_id,ref):
         msg = MIMEMultipart('alternative')
         msg["Message-ID"] = email.utils.make_msgid()
@@ -131,7 +146,7 @@ def send_page(to_user,page_name,page_content,subject,m_id,ref):
         context = {'pg_name': page_name,'pg_content': page_content,'img_url':img_name}
     	Html = render(None, 'ndf/mio_index.html', context)
        	html = str(Html)
-       	html = html.strip('Content-Type: text/html; charset=utf-8\n')	
+       	html = html.strip('Content-Type: text/html; charset=utf-8\n')
         msg.attach(MIMEText(html, 'html'))
         smtpObj=smtplib.SMTP('smtp.gmail.com', 587)
         smtpObj.ehlo()
@@ -139,6 +154,7 @@ def send_page(to_user,page_name,page_content,subject,m_id,ref):
         smtpObj.login(mio_from_email,mio_from_password)
         smtpObj.sendmail(mio_from_email,to_user,msg.as_string())
         smtpObj.quit()
+
 
 def update_page(name,content,id,user_id):
 	gst_page = node_collection.one({u'_id':ObjectId(id)})
@@ -152,6 +168,7 @@ def update_page(name,content,id,user_id):
 		gst_page.save()
 	except Exception as e:
 		print "Exception while updating page from mail:  " + str(e)
+
 
 def upload(gp_name,filename,name,author,content):
 	home_grp = node_collection.one({'_type': "Group", 'name':gp_name})
@@ -199,6 +216,7 @@ def upload(gp_name,filename,name,author,content):
 
 	return 'done'
 
+
 class MyHTMLParser(HTMLParser):
     pg_content = ''
     pg_name = ''
@@ -209,10 +227,10 @@ class MyHTMLParser(HTMLParser):
             self.flag1 = 1
         if(('name', 'pg_content') in attrs):
             self.flag2 = 1
-        
+
     def handle_endtag(self, tag):
-        a = 0       
-    
+        a = 0
+
     def handle_data(self, data):
         if(self.flag1 == 1):
             self.pg_name = data
@@ -223,6 +241,7 @@ class MyHTMLParser(HTMLParser):
 
     def return_values(self):
         return self.pg_name ,self.pg_content
+
 
 def get_content(html_body):
     parser = MyHTMLParser()
@@ -241,7 +260,8 @@ def open_connection():
 		return connection
 	except Exception as e:
 		print 'Not able to sign in!'+str(e)
-		
+
+
 def open_unseen(conn):
 	try:
 		conn.select('INBOX')
@@ -260,6 +280,7 @@ def close_connection(conn):
 		conn.logout()
 	except Exception as e:
 		print "Couldn't logout of the account!"+str(e)
+
 
 def parse_subject(sub):
 	#Formats for subject:
@@ -285,7 +306,7 @@ def parse_subject(sub):
 	while(i<=ctr):
 		s = sub.find('[',e)+1
 		e = sub.find(']',s)
-		
+
 		if(i==1):
 			group_name = sub[s:e]
 		elif(i==2):
@@ -295,12 +316,14 @@ def parse_subject(sub):
 
 	activity_name = sub[s:len(sub)]
 	activity_name = activity_name.strip()
-	return group_name,activity,activity_name
+	return group_name, activity, activity_name
+
 
 def parse_mail(email):
 	s = email.find('<')+1
 	e = email.find('>',s)
 	return email[s:e]
+
 
 class Email1:
 	grp_name = ''
@@ -329,11 +352,11 @@ class Email1:
 			for header in ['subject']:
 				self.Subject = mail[header]
 				self.grp_name, self.activity, self.act_title = parse_subject(self.Subject)
-				
+
 			for part in mail.walk():
 				if (part.get_content_type() == 'text/plain'):
 					self.Body = part.get_payload(decode=True)
-					
+
 			for part in mail.walk():
 				if part.get_content_maintype() == 'multipart':
 					continue
@@ -363,7 +386,7 @@ class Email1:
 				end = end+1
 				m_id = self.References[start:end]
 				gst_obj = node_collection.find({'_type':u'GSystem'})
-				
+
 				for i in range(gst_obj.count()):
 					if({'mio': m_id} in gst_obj[i].origin):
 						self.ObjectId = str(gst_obj[i]._id)
@@ -371,7 +394,7 @@ class Email1:
 				for part in mail.walk():
 					if (part.get_content_type() == 'text/plain' or part.get_content_type() == 'text/html'):
 						self.Body = part.get_payload(decode=True)
-				
+
 				self.act_title , self.Body = get_content(self.Body)
 		except Exception as e:
 			print 'Not able to download all attachments.'+str(e)
@@ -401,18 +424,24 @@ class Email1:
 	def change_gp_name(self,gp):
 		self.grp_name = gp
 
+
 connection_state = open_connection()
 unread_inbox = open_unseen(connection_state)
 obj = Email1()
+
 for msgId in unread_inbox[0].split():
 	obj.mail_extract(msgId, connection_state)
-	
-	id,check,error,groupName = authenticate_user(mail=obj.return_from(),group_name=obj.return_grp_name())
-	obj.change_gp_name(gp=groupName)
-	
-	if(obj.return_update()==False):
-		if(check==True):
-			
+
+	id, check, error, group_name = authenticate_user(mail=obj.return_from(),group_name=obj.return_grp_name())
+	# print "id : ", id
+	# print "check : ", check
+	# print "error : ", error
+	# print "group_name : ", group_name
+	obj.change_gp_name(gp=group_name)
+
+	if(obj.return_update() == False):
+		if(check == True):
+
 			detach_dir = '.'
 			if 'attachment' not in os.listdir(detach_dir):
 				os.mkdir('attachment')
@@ -425,10 +454,10 @@ for msgId in unread_inbox[0].split():
 										filename=obj.return_fileName(),
 										name=obj.return_act_title(),
 										author=id,content=obj.return_body())
-			else:	
+			else:
 				p_id = create_page(name=obj.return_act_title(),content=obj.return_body(),
 					created_by=id,group_name=obj.return_grp_name(),m_id=obj.return_MessageId())
-			
+
 			if(isinstance(p_id,str)):
 				send_page(to_user=obj.return_from(),page_name=obj.return_act_title(),
 					page_content=obj.return_body(),subject=obj.return_sub(),m_id=obj.return_MessageId(),ref=obj.return_Ref())
@@ -436,6 +465,7 @@ for msgId in unread_inbox[0].split():
 		update_page(name=obj.return_act_title(),content=obj.return_body(),id=obj.return_ObjectId(),user_id=id)
 		send_page(to_user=obj.return_from(),page_name=obj.return_act_title(),
 			page_content=obj.return_body(),subject=obj.return_sub(),m_id=obj.return_MessageId(),ref=obj.return_Ref())
+
 close_connection(connection_state)
 
 #**************************************************************************************#
