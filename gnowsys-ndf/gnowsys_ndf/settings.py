@@ -514,6 +514,7 @@ INSTALLED_APPS = (
     'memcache_admin',
     'django_mailbox',
     'djcelery',
+    'rest_framework'
     #'dlkit',
     #'dlkit_runtime'
 )
@@ -1031,6 +1032,17 @@ GSTUDIO_INSTITUTE_ID_SECONDARY = ''
 GSTUDIO_INSTITUTE_NAME = ''
 #
 # --- End of BUDDY Module ---
+
+
+# DRF API
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ]
+}
+# --- END of DRF API ---
 
 
 # # textb

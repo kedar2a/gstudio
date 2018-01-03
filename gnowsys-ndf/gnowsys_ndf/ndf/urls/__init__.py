@@ -41,12 +41,12 @@ urlpatterns = patterns('',
     # --end of mobwrite
 
     # url(r'^(?P<group_id>[^/]+)/mailclient[/]error[/](?P<error_obj>[\w-]+)$', 'gnowsys_ndf.ndf.views.mailclient.mailclient_error_display', name='mailclient_error_display'),
-
     url(r'^$', homepage, {"group_id": "home"}, name="homepage"),
     url(r'^welcome/?', landing_page, name="landing_page"),
 
     url(r'^captcha/', include('captcha.urls')),
     (r'^', include('gnowsys_ndf.ndf.urls.captcha')),
+
 
     # all main apps
     (r'^(?P<group_id>[^/]+)/mailclient', include('gnowsys_ndf.ndf.urls.mailclient')),
@@ -64,9 +64,7 @@ urlpatterns = patterns('',
     (r'^(?P<group_id>[^/]+)/quiz', include('gnowsys_ndf.ndf.urls.quiz')),
     (r'^(?P<group_id>[^/]+)/discussion', include('gnowsys_ndf.ndf.urls.discussion')),
     (r'^(?P<group_id>[^/]+)/unit',include('gnowsys_ndf.ndf.urls.unit')),
-    # (r'^api/v1|api',include('gnowsys_ndf.ndf.urls.api')),
-    (r'^api/v1',include('gnowsys_ndf.ndf.urls.api_v1')),
-    (r'^api/v2',include('gnowsys_ndf.ndf.urls.api_v2')),
+    
     
     # Commented following url for khaal hackathon
     (r'^(?P<group_id>[^/]+)/course', include('gnowsys_ndf.ndf.urls.course')),
@@ -104,7 +102,6 @@ urlpatterns = patterns('',
     (r'^(?P<group_id>[^/]+)/type_created',include('gnowsys_ndf.ndf.urls.type_created')),
 
     url(r'^(?P<group_id>[^/]+)/topic_details/(?P<app_Id>[\w-]+)', 'gnowsys_ndf.ndf.views.topics.topic_detail_view', name='topic_details'),
-
     # -- django-json-rpc method calls --
     url(r'^json/browse/$', 'jsonrpc.views.browse', name='jsonrpc_browser'),
     url(r'^json/$', jsonrpc_site.dispatch, name='jsonrpc_mountpoint'),
@@ -121,6 +118,7 @@ urlpatterns = patterns('',
     (r'^dev/', include('gnowsys_ndf.ndf.urls.dev_utils')),
     (r'^tools/', include('gnowsys_ndf.ndf.urls.tools')),
     
+
     # meeting app
     # (r'^online/', include('online_status.urls')),   #for online_users.
     # url(r'^(?P<group_id>[^/]+)/inviteusers/(?P<meetingid>[^/]+)','gnowsys_ndf.ndf.views.meeting.invite_meeting', name='invite_meeting'),
@@ -140,9 +138,14 @@ urlpatterns = patterns('',
     # --end of discussion
 
     url(r'^(?P<group_id>[^/]+)/visualize', include('gnowsys_ndf.ndf.urls.visualise_urls')),
-
     (r'^explore/', include('gnowsys_ndf.ndf.urls.explore')),
     url(r'^help-page/(?P<page_name>[^/]+)$', 'gnowsys_ndf.ndf.views.home.help_page_view', name='help_page_view'),
+
+    # API
+    (r'^api/v1', include('gnowsys_ndf.ndf.urls.api_v1')),
+    (r'^api/v2', include('gnowsys_ndf.ndf.urls.api_v2')),
+    (r'^api/v3/', include('gnowsys_ndf.ndf.urls.api_v3')),
+
     url(r'^(?P<group_id>[^/]+)/$', 'gnowsys_ndf.ndf.views.group.group_dashboard', name='groupchange'),
     # ---listing sub partners---
     url(r'^(?P<group_id>[^/]+)/partners$', 'gnowsys_ndf.ndf.views.partner.partner_list', name='partnerlist'),
