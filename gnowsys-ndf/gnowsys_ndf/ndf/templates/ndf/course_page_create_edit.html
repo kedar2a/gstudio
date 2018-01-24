@@ -1,7 +1,7 @@
 {% load i18n %}
 {% load ndf_tags %}
     <div id="addActivityPage" >
-        <form id ="course_page_form" enctype="multipart/form-data" method="post" action="{% url 'save_course_page' group_id %}">{% csrf_token %}
+        <form id ="course_page_form" enctype="multipart/form-data" method="post"  {%  if title == "create_asset_pages" %} action="{% url 'save_asset_page' group_id asset_id %}" {% else %} action="{% url 'save_course_page' group_id %}"  {% endif %} >{% csrf_token %}
             <div>
                 <div class="small-12 columns">
                     <div class="row">
@@ -92,11 +92,14 @@
                     </div>
                 </div>
                 <br/>
-
                 <div class="row">
-                    <input type="submit" class="orange-button" style="margin-left: 21px" class="saveActivityPage" value="Save">
-                    <a href="{{cancel_activity_url}}" class="orange-button cancel-page-create">{% trans "Cancel" %}</a>
+                    <input type="submit" class="button-save-new" class="saveActivityPage" value="Save">
+                    <button class="button-cancel-new">
+                        <a href="{{cancel_activity_url}}" class="cancel-page-create">{% trans "Cancel" %}</a>
+                    </button>
                 </div>
+                <br/>
+                <br/>
             </div>
         </form>
     </div>

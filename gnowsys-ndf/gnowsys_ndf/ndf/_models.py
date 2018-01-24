@@ -1953,27 +1953,37 @@ class GSystem(Node):
 
     # static query methods
     @staticmethod
-    def query_list(group_id, member_of_name, user_id=None):
-
+    def query_list(group_id, member_of_name, user_id=None,if_gstaff=False,**kwargs):
         group_name, group_id = Group.get_group_name_id(group_id)
-        gst_name, gst_id = GSystemType.get_gst_name_id(member_of_name)
-
-        return node_collection.find({
-                            '_type': 'GSystem',
-                            'status': 'PUBLISHED',
-                            'group_set': {'$in': [group_id]},
-                            'member_of': {'$in': [gst_id]},
-                            '$or':[
-                                    {'access_policy': {'$in': [u'Public', u'PUBLIC']}},
-                                    # {'$and': [
-                                    #     {'access_policy': u"PRIVATE"},
-                                    #     {'created_by': user_id}
-                                    #     ]
-                                    # },
-                                    {'created_by': user_id}
+        gst_name, gst_id = GSystemType.get_gst_name_id(member_of_name)            
+        if if_gstaff:
+            query = {
+                    '_type': 'GSystem',
+                    'status': 'PUBLISHED',
+                    'group_set': {'$in': [group_id]},
+                    'member_of': {'$in': [gst_id]},
+                    'access_policy': {'$in': [u'Public', u'PUBLIC',u'PRIVATE']}
+                    }
+        else:
+            query = {
+                    '_type': 'GSystem',
+                    'status': 'PUBLISHED',
+                    'group_set': {'$in': [group_id]},
+                    'member_of': {'$in': [gst_id]},
+                    '$or':[
+                            {'access_policy': {'$in': [u'Public', u'PUBLIC']}},
+                            {'$and': [
+                                {'access_policy': u"PRIVATE"},
+                                {'created_by': user_id}
                                 ]
-                        }).sort('last_update', -1)
-
+                            },
+                            {'created_by': user_id}
+                        ]
+                    }
+        for each in kwargs:
+            query.update({each : kwargs[each]})
+        return node_collection.find(query).sort('last_update', -1)
+        
     @staticmethod
     def child_class_names():
         '''
@@ -2364,7 +2374,7 @@ class Filehive(DjangoDocument):
                 try:
                     if history_manager.create_or_replace_json_file(self):
                         fp = history_manager.get_file_path(self)
-                        message = "This document (" + str(self.md5) + ") is re-created on " + datetime.uploaded_at.strftime("%d %B %Y")
+                        message = "This document (" + str(self.md5) + ") is re-created on " + self.uploaded_at.strftime("%d %B %Y")
                         rcs_obj.checkin(fp, 1, message.encode('utf-8'), "-i")
 
                 except Exception as err:

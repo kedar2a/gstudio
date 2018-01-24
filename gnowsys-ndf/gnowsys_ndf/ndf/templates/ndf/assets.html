@@ -38,7 +38,7 @@
         {% if user.is_authenticated  %}
             {% if title == "raw material" and is_gstaff %}
                 <button type="button" class="right orange-button createAsset" style="margin-right:70px;">
-                    <i class="fi-plus"> </i>{% trans "Add Resource" %} 
+                    <i class="fi-plus"> </i>{% trans "Add Folder" %} 
                 </button>
             {% endif %}
             {% if title == "gallery"  %}
@@ -48,7 +48,7 @@
             {% endif %}
             {% if title == "asset_list"  %}
                 <button type="button" class="right orange-button createAsset" style="margin-right:70px;">
-                    <i class="fi-plus"> </i>{% trans "Add Asset" %} 
+                    <i class="fi-plus"> </i>{% trans "Add Folder" %} 
                 </button>
             {% endif %}
         
@@ -58,7 +58,7 @@
 <div class="row listing-row">
   {% for each_asset in asset_nodes %}
     
-    {% include 'ndf/asset_card.html' with url_name="asset_detail" first_arg=group_id second_arg=each_asset.pk each=each_asset %}    
+    {% include 'ndf/asset_card.html' with url_name="asset_detail" first_arg=group_id second_arg=each_asset.pk each=each_asset no_checkbox=True %}    
   {% endfor %}
 </div>
 {% comment %}
